@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from config.database import get_db
 from repositories.produto_repository import ProdutoRepository
 from repositories.artigo_repository import ArtigoRepository
-from services.gemini_service import gerar_artigo
+from services.llm_service import gerar_artigo
 from services.github_service import publicar_artigo, artigo_existe
 
 logger = logging.getLogger("digitaltech")
