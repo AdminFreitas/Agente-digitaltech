@@ -91,7 +91,10 @@ def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)
         )
 
     status_inicial = "publicado" if dados.publicar_imediatamente else "rascunho"
-    imagem = buscar_imagem_capa(dados.categoria)
+    imagem = buscar_imagem_capa(
+    titulo=artigo["titulo"],
+    tema=dados.tema,
+    categoria=dados.categoria)
 
     artigo_id = repo.criar(
         slug=artigo["slug"],
@@ -100,9 +103,9 @@ def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)
         resumo=artigo["excerpt"],
         conteudo_markdown=artigo["conteudo_markdown"],
         status=status_inicial,
-        imagem_url=imagem["url"] if imagem else None,
-        imagem_autor=imagem["autor"] if imagem else None,
-        imagem_link=imagem["link"] if imagem else None,
+        imagem_url=imagem["imagem_url"] if imagem else None,
+        imagem_autor=imagem["imagem_autor"] if imagem else None,
+        imagem_link=imagem["imagem_link"] if imagem else None,
     )
 
     return {
@@ -112,7 +115,7 @@ def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)
         "categoria": artigo["categoria"],
         "categoria_id": categoria_id,
         "status": status_inicial,
-        "imagem": imagem["url"] if imagem else None,
+        "imagem": imagem["imagem_url"] if imagem else None,
         "mensagem": "Artigo gerado e salvo no banco Neon com sucesso.",
     }
 
