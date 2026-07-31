@@ -23,11 +23,24 @@ class ArtigoRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def buscar_categoria_id(self, nome_categoria: str) -> int | None:
+        """Resolve o nome/slug de uma categoria para seu ID na tabela `categorias`.
+
+        ATENCAO: assume colunas `nome` e `slug` em `categorias` -- confirme
+        com \\d categorias no banco real e ajuste se os nomes forem outros.
+        """
+        slug = nome_categoria.lower().strip().replace(" ", "-")
+        resultado = self.db.execute(
+            text("SELECT id FROM categorias WHERE nome ILIKE :nome OR slug = :slug LIMIT 1"),
+            {"nome": nome_categoria, "slug": slug},
+        ).fetchone()
+        return resultado[0] if resultado else None
+
     def criar(
         self,
         slug: str,
         titulo: str,
-        categoria: str,
+        categoria_id: int,
         resumo: str,
         conteudo_markdown: str,
         status: str = "rascunho",
@@ -43,11 +56,11 @@ class ArtigoRepository:
             text("""
                 INSERT INTO artigos (
                     titulo, slug, resumo, conteudo_md, conteudo_html,
-                    categoria, autor_id, status, tempo_leitura,
+                    categoria_id, autor_id, status, tempo_leitura,
                     imagem_url, imagem_autor, imagem_link, data_publicacao
                 ) VALUES (
                     :titulo, :slug, :resumo, :conteudo_md, :conteudo_html,
-                    :categoria, :autor_id, :status, :tempo_leitura,
+                    :categoria_id, :autor_id, :status, :tempo_leitura,
                     :imagem_url, :imagem_autor, :imagem_link, NOW()
                 )
                 RETURNING id
@@ -58,7 +71,7 @@ class ArtigoRepository:
                 "resumo": resumo,
                 "conteudo_md": conteudo_markdown,
                 "conteudo_html": conteudo_html,
-                "categoria": categoria,
+                "categoria_id": categoria_id,
                 "autor_id": AUTOR_ID_AGENTE,
                 "status": status,
                 "tempo_leitura": tempo_leitura,

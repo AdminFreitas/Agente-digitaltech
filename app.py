@@ -83,13 +83,20 @@ def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)
     if repo.buscar_por_slug(artigo["slug"]):
         raise HTTPException(status_code=409, detail=f"Já existe um artigo com o slug '{artigo['slug']}'")
 
+    categoria_id = repo.buscar_categoria_id(artigo["categoria"])
+    if categoria_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Categoria '{artigo['categoria']}' não existe no banco. Verifique o nome ou cadastre a categoria antes.",
+        )
+
     status_inicial = "publicado" if dados.publicar_imediatamente else "rascunho"
     imagem = buscar_imagem_capa(dados.categoria)
 
     artigo_id = repo.criar(
         slug=artigo["slug"],
         titulo=artigo["titulo"],
-        categoria=artigo["categoria"],
+        categoria_id=categoria_id,
         resumo=artigo["excerpt"],
         conteudo_markdown=artigo["conteudo_markdown"],
         status=status_inicial,
@@ -103,6 +110,7 @@ def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)
         "slug": artigo["slug"],
         "titulo": artigo["titulo"],
         "categoria": artigo["categoria"],
+        "categoria_id": categoria_id,
         "status": status_inicial,
         "imagem": imagem["url"] if imagem else None,
         "mensagem": "Artigo gerado e salvo no banco Neon com sucesso.",
