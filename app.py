@@ -7,6 +7,7 @@ from repositories.produto_repository import ProdutoRepository
 from repositories.artigo_repository import ArtigoRepository
 from services.llm_service import gerar_artigo
 from services.imagem_service import buscar_imagem_capa
+from pipeline.gerar_noticias import gerar_e_processar_noticia
 
 logger = logging.getLogger("digitaltech")
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,13 @@ class GerarArtigoInput(BaseModel):
     publicar_imediatamente: bool = Field(
         default=False,
         description="Se True, o artigo já entra como 'publicado'. Se False, entra como 'rascunho'."
+    )
+
+class GerarNoticiaInput(BaseModel):
+    categoria: str = Field(default="Tecnologia", description="Categoria da notícia no blog")
+    publicar_imediatamente: bool = Field(
+        default=False,
+        description="Se True, já marca a notícia como 'publicado'. Se False, entra como 'rascunho'."
     )
 
 @app.get("/health", tags=["Sistema"])
@@ -130,6 +138,28 @@ def publicar_artigo_existente(artigo_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Artigo já está publicado")
     repo.publicar(artigo_id)
     return {"id": artigo_id, "slug": artigo.slug, "status": "publicado", "mensagem": "Artigo publicado com sucesso."}
+
+@app.post("/noticias/gerar", status_code=201, tags=["Agente de Notícias"])
+def gerar_e_salvar_noticia(dados: GerarNoticiaInput):
+    """
+    Busca notícias recentes via RSS e roda a cadeia completa
+    (EditorChefe → editor → revisor → seo) para a notícia de maior
+    prioridade ainda não publicada. `noticias` é uma tabela própria no
+    banco, separada de `artigos`.
+    """
+    try:
+        resultado = gerar_e_processar_noticia(
+            categoria=dados.categoria,
+            publicar_imediatamente=dados.publicar_imediatamente,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Falha ao gerar notícia")
+        raise HTTPException(status_code=502, detail="Erro ao gerar notícia.") from exc
+
+    resultado["mensagem"] = "Notícia gerada e salva no banco Neon com sucesso."
+    return resultado
 
 @app.get("/artigos", tags=["Agente de Artigos"])
 def listar_artigos(db: Session = Depends(get_db)):
