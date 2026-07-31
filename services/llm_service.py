@@ -191,6 +191,28 @@ PROVEDORES = [
 ]
 
 
+def gerar_texto(prompt: str, tentativas_por_provedor: int = 2) -> str:
+    """
+    Envia um prompt genérico para o mesmo fallback chain usado por
+    gerar_artigo() (Ollama -> OpenAI -> Claude -> Gemini), mas devolve
+    o texto bruto da resposta, sem parsing de título/resumo/corpo.
+    Usado pelos agentes que nao escrevem artigos completos:
+    pesquisador.py, revisor.py e seo.py.
+    """
+    erros = []
+    for nome, funcao in PROVEDORES:
+        for tentativa in range(1, tentativas_por_provedor + 1):
+            try:
+                print(f"[LLM] (gerar_texto) Tentando {nome} (tentativa {tentativa}/{tentativas_por_provedor})...")
+                return funcao(prompt)
+            except Exception as e:
+                print(f"[LLM] (gerar_texto) {nome} falhou: {e}")
+                erros.append(f"{nome}: {e}")
+                break
+
+    raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
+
+
 def gerar_artigo(tema: str, categoria: str = "Tecnologia", tentativas_por_provedor: int = 2) -> dict:
     """
     Tenta gerar artigo com cada provedor na ordem. Sempre imprime uma

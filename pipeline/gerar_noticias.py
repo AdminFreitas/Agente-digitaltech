@@ -1,18 +1,25 @@
 """
 pipeline/gerar_noticias.py — Orquestra o fluxo de NOTÍCIAS
 
-pesquisador (RSS) → editor (reescreve) → revisor → imagem_service →
-seo → publisher
+pesquisador (RSS) → EditorChefe (dedup + score, sem LLM) → editor
+(reescreve) → revisor → seo → NoticiaRepository (tabela `noticias` —
+schema próprio, sem colunas de imagem, categoria é FK)
 
 Reaproveitado tanto pela API (app.py, endpoint POST /noticias/gerar)
 quanto por um script de linha de comando (bloco __main__ abaixo).
+
+Sem busca de imagem aqui: a tabela `noticias` não tem nenhuma coluna
+pra isso hoje. Sem publicação no GitHub também — isso ainda depende de
+decidir se faz sentido pra notícias (github_service.py hoje só sabe
+escrever em content/artigos/), então por enquanto "publicar" uma
+notícia só muda o status no Neon, igual ao Agente B parece fazer.
 """
 
 from sqlalchemy.orm import Session
 
-from agents import pesquisador, editor, revisor, seo, publisher
-from repositories.artigo_repository import ArtigoRepository
-from services.imagem_service import buscar_imagem_capa
+from agents import pesquisador, editor, revisor, seo
+from agents.editor_chefe import EditorChefe
+from repositories.noticia_repository import NoticiaRepository
 
 
 def gerar_e_processar_noticia(
@@ -22,55 +29,77 @@ def gerar_e_processar_noticia(
     publicar_imediatamente: bool = False,
 ) -> dict:
     """
-    Busca notícias recentes via RSS e roda a cadeia completa para a
-    primeira que ainda não tenha sido publicada (checagem por slug,
-    feita DEPOIS de gerar o texto reescrito — o slug final depende do
-    título que o editor.py produz, não do título original da fonte).
-    Tenta até `max_tentativas` candidatos antes de desistir.
+    Busca notícias recentes via RSS, usa o EditorChefe pra descartar
+    duplicadas (entre os candidatos e contra o que já está salvo em
+    `noticias`) e priorizar, e roda a cadeia completa para o item de
+    maior prioridade que ainda não tenha sido publicado (checagem por
+    slug, feita DEPOIS de gerar o texto — o slug final depende do
+    título que o editor.py produz, não do título original do feed).
+    Tenta até `max_tentativas` itens da pauta antes de desistir.
 
-    Levanta ValueError se não houver nenhuma notícia nos feeds, ou se
-    todos os candidatos tentados já tiverem sido publicados antes.
+    Levanta ValueError se não houver nenhuma notícia nos feeds, se o
+    EditorChefe descartar tudo por duplicidade, ou se todos os
+    candidatos tentados já tiverem sido publicados antes.
     """
-    candidatos = pesquisador.pesquisar_noticias()
-    if not candidatos:
+    candidatos_brutos = pesquisador.pesquisar_noticias()
+    if not candidatos_brutos:
         raise ValueError("Nenhuma notícia encontrada nos feeds RSS configurados")
 
-    repo = ArtigoRepository(db)
-    artigo = None
-    noticia_escolhida = None
+    repo = NoticiaRepository(db)
+    titulos_existentes = repo.listar_titulos_recentes(limite=100)
 
-    for noticia in candidatos[:max_tentativas]:
-        candidato_artigo = editor.gerar_noticia_base(noticia, categoria=categoria)
+    editor_chefe = EditorChefe()
+    pauta = editor_chefe.montar_pauta(candidatos_brutos, categoria, titulos_existentes=titulos_existentes)
+
+    if not pauta:
+        raise ValueError("Todas as notícias encontradas já foram publicadas ou são duplicadas entre si")
+
+    artigo = None
+    item_escolhido = None
+
+    for item in pauta[:max_tentativas]:
+        candidato_artigo = editor.gerar_noticia_base(
+            {"titulo": item.titulo, "resumo": item.resumo, "fonte": item.fonte, "link": item.link},
+            categoria=categoria,
+        )
         if repo.buscar_por_slug(candidato_artigo["slug"]):
-            print(f"[Pipeline] '{noticia['titulo']}' já publicada (slug duplicado), tentando a próxima.")
+            print(f"[Pipeline] '{item.titulo}' já publicada (slug duplicado), tentando a próxima da pauta.")
             continue
         artigo = candidato_artigo
-        noticia_escolhida = noticia
+        item_escolhido = item
         break
 
     if artigo is None:
-        raise ValueError("Todas as notícias candidatas já foram publicadas antes")
+        raise ValueError("Todos os itens tentados da pauta já foram publicados antes")
 
     artigo = revisor.revisar_artigo(artigo)
-    imagem = buscar_imagem_capa(titulo=artigo["titulo"], categoria=categoria)
-    artigo = seo.otimizar_seo(artigo, imagem=imagem)
-    artigo_id = publisher.salvar_artigo(db, artigo, imagem)
+    artigo = seo.otimizar_seo(artigo)  # sem imagem — noticias não tem coluna pra isso
+
+    noticia_id = repo.criar(
+        slug=artigo["slug"],
+        titulo=artigo.get("titulo_seo") or artigo["titulo"],
+        categoria=categoria,
+        resumo=artigo.get("meta_description") or artigo.get("excerpt", ""),
+        conteudo=artigo["conteudo_markdown"],
+        fonte=item_escolhido.fonte,
+        url_fonte=item_escolhido.link,
+        status="rascunho",
+    )
 
     resultado = {
-        "id": artigo_id,
+        "id": noticia_id,
         "slug": artigo["slug"],
         "titulo": artigo["titulo"],
-        "categoria": artigo["categoria"],
+        "categoria": categoria,
         "status": "rascunho",
-        "imagem": imagem["imagem_url"] if imagem else None,
-        "fonte_original": noticia_escolhida["link"],
+        "prioridade": item_escolhido.prioridade,
+        "score": item_escolhido.score,
+        "fonte_original": item_escolhido.link,
     }
 
     if publicar_imediatamente:
-        resultado_publicacao = publisher.publicar(db, artigo_id)
-        resultado["status"] = resultado_publicacao["status"]
-        resultado["github_url"] = resultado_publicacao["github_url"]
-        resultado["blog_url"] = resultado_publicacao["blog_url"]
+        repo.publicar(noticia_id)
+        resultado["status"] = "publicado"
 
     return resultado
 

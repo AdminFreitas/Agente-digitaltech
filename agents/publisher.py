@@ -29,10 +29,18 @@ def salvar_artigo(db, artigo: dict, imagem: dict | None) -> int:
     o ID gerado. Não publica no GitHub ainda — isso é publicar().
     """
     repo = ArtigoRepository(db)
+
+    categoria_id = repo.buscar_categoria_id(artigo["categoria"])
+    if categoria_id is None:
+        raise ValueError(
+            f"Categoria '{artigo['categoria']}' não existe no banco. "
+            "Verifique o nome ou cadastre a categoria antes de salvar."
+        )
+
     return repo.criar(
         slug=artigo["slug"],
         titulo=artigo.get("titulo_seo") or artigo["titulo"],
-        categoria=artigo["categoria"],
+        categoria_id=categoria_id,
         resumo=artigo.get("meta_description") or artigo.get("excerpt", ""),
         conteudo_markdown=artigo["conteudo_markdown"],
         status="rascunho",
@@ -56,10 +64,12 @@ def publicar(db, artigo_id: int) -> dict:
     if artigo_db is None:
         raise ValueError(f"Artigo {artigo_id} não encontrado")
 
+    categoria_nome = repo.buscar_categoria_nome(artigo_db.categoria_id)
+
     artigo = {
         "titulo": artigo_db.titulo,
         "slug": artigo_db.slug,
-        "categoria": artigo_db.categoria,
+        "categoria": categoria_nome or "Tecnologia",
         "excerpt": artigo_db.resumo,
         "conteudo_markdown": artigo_db.conteudo_md,
         "readTime": artigo_db.tempo_leitura,

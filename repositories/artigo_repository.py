@@ -91,6 +91,15 @@ class ArtigoRepository:
         )
         self.db.commit()
 
+    def buscar_categoria_nome(self, categoria_id: int) -> str | None:
+        """Busca o nome de uma categoria pelo ID -- usado para montar o
+        front matter do Markdown publicado no GitHub."""
+        resultado = self.db.execute(
+            text("SELECT nome FROM categorias WHERE id = :id"),
+            {"id": categoria_id},
+        ).fetchone()
+        return resultado[0] if resultado else None
+
     def buscar_por_id(self, artigo_id: int):
         return self.db.execute(
             text("SELECT * FROM artigos WHERE id = :id"), {"id": artigo_id}
@@ -104,8 +113,11 @@ class ArtigoRepository:
     def listar_todos(self, limite: int = 50):
         return self.db.execute(
             text("""
-                SELECT id, slug, titulo, categoria, status, data_publicacao
-                FROM artigos ORDER BY criado_em DESC LIMIT :limite
+                SELECT a.id, a.slug, a.titulo, c.nome AS categoria,
+                       a.status, a.data_publicacao
+                FROM artigos a
+                LEFT JOIN categorias c ON c.id = a.categoria_id
+                ORDER BY a.criado_em DESC LIMIT :limite
             """),
             {"limite": limite},
         ).fetchall()
