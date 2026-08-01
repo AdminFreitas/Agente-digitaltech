@@ -6,9 +6,17 @@ DIFERENTE de `artigos`:
 - categoria é uma foreign key (`categoria_id`, tabela `categorias`),
   não texto livre — por isso _resolver_categoria_id() abaixo.
 - tempo_leitura é INTEGER (minutos), não texto tipo "6 min".
-- não tem NENHUMA coluna de imagem.
-- o conteúdo fica numa única coluna `conteudo` (sem conteudo_html
-  separado como em artigos — o front-end é quem renderiza).
+- imagens ficam em DOIS lugares, de propósito:
+    * tabela `imagens` (noticia_id, url, alt, principal) -- é o que o
+      site (`src/lib/noticias.ts`) realmente consulta via LEFT JOIN
+      para renderizar a página da notícia.
+    * colunas `imagem_*` em `noticias` -- metadados de atribuição e
+      auditoria (autor, link, fonte, query de busca, url original da
+      matéria) que a tabela `imagens` não tem espaço para guardar.
+  Os dois são gravados juntos, na mesma transação, dentro de criar().
+- o conteúdo fica na coluna `conteudo_md` (renomeada de `conteudo`
+  pela migração) — sem conteudo_html separado como em artigos, o
+  front-end é quem renderiza o Markdown.
 """
 
 import os
@@ -109,41 +117,106 @@ class NoticiaRepository:
         status: str = "rascunho",
         meta_title: str | None = None,
         meta_description: str | None = None,
+        imagem_url: str | None = None,
+        imagem_original_url: str | None = None,
+        imagem_alt: str | None = None,
+        imagem_fonte: str | None = None,
+        imagem_autor: str | None = None,
+        imagem_link: str | None = None,
+        imagem_query: str | None = None,
     ) -> int:
-        """Salva uma nova notícia. Retorna o ID gerado."""
+        """Salva uma nova notícia. Retorna o ID gerado.
+
+        Se `imagem_url` for informado (deve ser a og:image extraída da
+        matéria original, nunca uma foto genérica de banco de imagens),
+        a imagem também é gravada como principal na tabela `imagens` e
+        os metadados de atribuição são preenchidos em `noticias`,
+        dentro da MESMA transação da criação da notícia. Se
+        `imagem_url` não for informado, o comportamento é idêntico ao
+        de antes — nenhuma linha em `imagens`, colunas `imagem_*` de
+        `noticias` ficam NULL.
+
+        Se qualquer etapa falhar (INSERT da notícia, INSERT da imagem
+        ou UPDATE dos metadados), a transação inteira é desfeita — não
+        fica notícia sem imagem nem imagem "órfã".
+        """
         categoria_id = self._resolver_categoria_id(categoria)
         tempo_leitura = _calcular_tempo_leitura_minutos(conteudo)
 
-        resultado = self.db.execute(
-            text("""
-                INSERT INTO noticias (
-                    titulo, slug, resumo, conteudo, autor_id, categoria_id,
-                    status, destaque, tempo_leitura, fonte, url_fonte,
-                    meta_title, meta_description, visualizacoes, data_publicacao
-                ) VALUES (
-                    :titulo, :slug, :resumo, :conteudo, :autor_id, :categoria_id,
-                    :status, false, :tempo_leitura, :fonte, :url_fonte,
-                    :meta_title, :meta_description, 0, NOW()
+        try:
+            resultado = self.db.execute(
+                text("""
+                    INSERT INTO noticias (
+                        titulo, slug, resumo, conteudo_md, autor_id, categoria_id,
+                        status, destaque, tempo_leitura, fonte, url_fonte,
+                        meta_title, meta_description, visualizacoes, data_publicacao
+                    ) VALUES (
+                        :titulo, :slug, :resumo, :conteudo_md, :autor_id, :categoria_id,
+                        :status, false, :tempo_leitura, :fonte, :url_fonte,
+                        :meta_title, :meta_description, 0, NOW()
+                    )
+                    RETURNING id
+                """),
+                {
+                    "titulo": titulo[:300],
+                    "slug": slug[:320],
+                    "resumo": resumo,
+                    "conteudo_md": conteudo,
+                    "autor_id": AUTOR_ID_AGENTE,
+                    "categoria_id": categoria_id,
+                    "status": status,
+                    "tempo_leitura": tempo_leitura,
+                    "fonte": (fonte or "")[:200],
+                    "url_fonte": url_fonte or "",
+                    "meta_title": (meta_title or titulo)[:70],
+                    "meta_description": (meta_description or resumo)[:165],
+                },
+            )
+            noticia_id = resultado.fetchone()[0]
+
+            if imagem_url:
+                self.db.execute(
+                    text("""
+                        INSERT INTO imagens (noticia_id, url, alt, principal)
+                        VALUES (:noticia_id, :url, :alt, true)
+                    """),
+                    {
+                        "noticia_id": noticia_id,
+                        "url": imagem_url,
+                        "alt": imagem_alt,
+                    },
                 )
-                RETURNING id
-            """),
-            {
-                "titulo": titulo[:300],
-                "slug": slug[:320],
-                "resumo": resumo,
-                "conteudo": conteudo,
-                "autor_id": AUTOR_ID_AGENTE,
-                "categoria_id": categoria_id,
-                "status": status,
-                "tempo_leitura": tempo_leitura,
-                "fonte": (fonte or "")[:200],
-                "url_fonte": url_fonte or "",
-                "meta_title": (meta_title or titulo)[:70],
-                "meta_description": (meta_description or resumo)[:165],
-            },
-        )
-        self.db.commit()
-        return resultado.fetchone()[0]
+
+                self.db.execute(
+                    text("""
+                        UPDATE noticias
+                        SET imagem_url = :imagem_url,
+                            imagem_original_url = :imagem_original_url,
+                            imagem_alt = :imagem_alt,
+                            imagem_fonte = :imagem_fonte,
+                            imagem_autor = :imagem_autor,
+                            imagem_link = :imagem_link,
+                            imagem_query = :imagem_query
+                        WHERE id = :id
+                    """),
+                    {
+                        "imagem_url": imagem_url,
+                        "imagem_original_url": imagem_original_url,
+                        "imagem_alt": imagem_alt,
+                        "imagem_fonte": imagem_fonte,
+                        "imagem_autor": imagem_autor,
+                        "imagem_link": imagem_link,
+                        "imagem_query": imagem_query,
+                        "id": noticia_id,
+                    },
+                )
+
+            self.db.commit()
+            return noticia_id
+
+        except Exception:
+            self.db.rollback()
+            raise
 
     def publicar(self, noticia_id: int) -> None:
         """Muda o status de uma notícia existente para 'publicado'."""
