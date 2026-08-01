@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 from config.database import get_db
 from repositories.produto_repository import ProdutoRepository
 from repositories.artigo_repository import ArtigoRepository
-from services.llm_service import gerar_artigo
-from services.imagem_service import buscar_imagem_capa
+from agents import publisher
+from pipeline.gerar_artigos import gerar_e_processar_artigo
 from pipeline.gerar_noticias import gerar_e_processar_noticia
 
 logger = logging.getLogger("digitaltech")
@@ -29,14 +29,14 @@ class GerarArtigoInput(BaseModel):
     categoria: str = Field(default="Tecnologia", description="Categoria do artigo no blog")
     publicar_imediatamente: bool = Field(
         default=False,
-        description="Se True, o artigo já entra como 'publicado'. Se False, entra como 'rascunho'."
+        description="Se True, já publica no GitHub e marca como 'publicado'. Se False, entra como 'rascunho'."
     )
 
 class GerarNoticiaInput(BaseModel):
     categoria: str = Field(default="Tecnologia", description="Categoria da notícia no blog")
     publicar_imediatamente: bool = Field(
         default=False,
-        description="Se True, já marca a notícia como 'publicado'. Se False, entra como 'rascunho'."
+        description="Se True, já publica no GitHub e marca como 'publicado'. Se False, entra como 'rascunho'."
     )
 
 @app.get("/health", tags=["Sistema"])
@@ -80,72 +80,53 @@ def deletar_produto(produto_id: int, db: Session = Depends(get_db)):
 
 @app.post("/artigos/gerar", status_code=201, tags=["Agente de Artigos"])
 def gerar_e_salvar_artigo(dados: GerarArtigoInput, db: Session = Depends(get_db)):
-    """Gera um artigo (Ollama → OpenAI → Claude → Gemini), busca imagem de capa e salva no Neon."""
+    """
+    Roda a cadeia completa (pesquisador → editor → revisor → imagem →
+    seo → publisher) e salva no Neon como 'rascunho'. Se
+    publicar_imediatamente=True, também publica no GitHub em seguida.
+    """
     try:
-        artigo = gerar_artigo(dados.tema, dados.categoria)
+        resultado = gerar_e_processar_artigo(
+            db,
+            tema=dados.tema,
+            categoria=dados.categoria,
+            publicar_imediatamente=dados.publicar_imediatamente,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Falha ao gerar artigo")
         raise HTTPException(status_code=502, detail="Erro ao gerar artigo.") from exc
 
-    repo = ArtigoRepository(db)
-    if repo.buscar_por_slug(artigo["slug"]):
-        raise HTTPException(status_code=409, detail=f"Já existe um artigo com o slug '{artigo['slug']}'")
-
-    categoria_id = repo.buscar_categoria_id(artigo["categoria"])
-    if categoria_id is None:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Categoria '{artigo['categoria']}' não existe no banco. Verifique o nome ou cadastre a categoria antes.",
-        )
-
-    status_inicial = "publicado" if dados.publicar_imediatamente else "rascunho"
-    imagem = buscar_imagem_capa(
-    titulo=artigo["titulo"],
-    tema=dados.tema,
-    categoria=dados.categoria)
-
-    artigo_id = repo.criar(
-        slug=artigo["slug"],
-        titulo=artigo["titulo"],
-        categoria_id=categoria_id,
-        resumo=artigo["excerpt"],
-        conteudo_markdown=artigo["conteudo_markdown"],
-        status=status_inicial,
-        imagem_url=imagem["imagem_url"] if imagem else None,
-        imagem_autor=imagem["imagem_autor"] if imagem else None,
-        imagem_link=imagem["imagem_link"] if imagem else None,
-    )
-
-    return {
-        "id": artigo_id,
-        "slug": artigo["slug"],
-        "titulo": artigo["titulo"],
-        "categoria": artigo["categoria"],
-        "categoria_id": categoria_id,
-        "status": status_inicial,
-        "imagem": imagem["imagem_url"] if imagem else None,
-        "mensagem": "Artigo gerado e salvo no banco Neon com sucesso.",
-    }
+    resultado["mensagem"] = "Artigo gerado e salvo no banco Neon com sucesso."
+    return resultado
 
 @app.post("/artigos/publicar/{artigo_id}", tags=["Agente de Artigos"])
 def publicar_artigo_existente(artigo_id: int, db: Session = Depends(get_db)):
-    """Muda um artigo salvo como 'rascunho' para 'publicado'."""
+    """Publica no GitHub e muda o status de um artigo salvo como 'rascunho' para 'publicado'."""
     repo = ArtigoRepository(db)
     artigo = repo.buscar_por_id(artigo_id)
     if not artigo:
         raise HTTPException(status_code=404, detail="Artigo não encontrado")
     if artigo.status == "publicado":
         raise HTTPException(status_code=409, detail="Artigo já está publicado")
-    repo.publicar(artigo_id)
-    return {"id": artigo_id, "slug": artigo.slug, "status": "publicado", "mensagem": "Artigo publicado com sucesso."}
+
+    try:
+        resultado = publisher.publicar(db, artigo_id)
+    except Exception as exc:
+        logger.exception("Falha ao publicar no GitHub")
+        raise HTTPException(status_code=502, detail="Erro ao publicar no GitHub.") from exc
+
+    resultado["mensagem"] = "Artigo publicado com sucesso."
+    return resultado
 
 @app.post("/noticias/gerar", status_code=201, tags=["Agente de Notícias"])
 def gerar_e_salvar_noticia(dados: GerarNoticiaInput):
     """
     Busca notícias recentes via RSS e roda a cadeia completa
-    (EditorChefe → editor → revisor → seo) para a notícia de maior
-    prioridade ainda não publicada. `noticias` é uma tabela própria no
-    banco, separada de `artigos`.
+    (editor → revisor → imagem → seo → publisher) para a primeira
+    notícia ainda não publicada. Publicar depois usa o mesmo
+    /artigos/publicar/{id} — notícias ficam na mesma tabela `artigos`.
     """
     try:
         resultado = gerar_e_processar_noticia(

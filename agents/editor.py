@@ -21,7 +21,7 @@ import re
 import unicodedata
 
 from services.llm_service import gerar_artigo as _gerar_artigo_llm
-from services.llm_service import gerar_texto
+from services.llm_service import gerar_texto_com_metadados
 
 
 def gerar_artigo_base(tema: str, categoria: str, briefing: dict | None = None) -> dict:
@@ -47,8 +47,8 @@ def gerar_noticia_base(fonte: dict, categoria: str) -> dict:
     """
     prompt = f"""Você é um jornalista de tecnologia brasileiro.
 
-Com base SOMENTE nestas informações de uma notícia (nunca copie
-frases da fonte -- escreva com suas próprias palavras):
+Com base SOMENTE nestas informações de uma notícia (nunca copie frases
+da fonte -- escreva com suas próprias palavras):
 
 Título original: {fonte['titulo']}
 Resumo original: {fonte['resumo']}
@@ -65,8 +65,8 @@ RESUMO: resumo de uma linha, no máximo 120 caracteres
 ===CORPO===
 o texto completo da notícia em markdown vai aqui
 """
-    texto = gerar_texto(prompt)
-    dados = _parsear_noticia(texto)
+    resultado_llm = gerar_texto_com_metadados(prompt)
+    dados = _parsear_noticia(resultado_llm["texto"])
 
     return {
         "slug": _gerar_slug(dados["titulo"]),
@@ -74,6 +74,9 @@ o texto completo da notícia em markdown vai aqui
         "categoria": categoria,
         "excerpt": dados["excerpt"],
         "conteudo_markdown": dados["corpo"],
+        "provedor_llm": resultado_llm["provedor"],
+        "modelo_llm": resultado_llm["modelo"],
+        "tempo_geracao_ms": resultado_llm["tempo_ms"],
     }
 
 

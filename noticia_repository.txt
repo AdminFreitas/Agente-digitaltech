@@ -19,7 +19,6 @@ DIFERENTE de `artigos`:
   front-end é quem renderiza o Markdown.
 """
 
-import hashlib
 import os
 import re
 import unicodedata
@@ -70,15 +69,6 @@ LIMIAR_SIMILARIDADE_CATEGORIA = 0.5
 def _calcular_tempo_leitura_minutos(texto: str) -> int:
     palavras = len((texto or "").split())
     return max(1, round(palavras / 200))
-
-
-def calcular_hash_conteudo(conteudo_markdown: str) -> str:
-    """SHA-256 do markdown final (após revisor+seo), usado para detectar
-    notícias com conteúdo repetido mesmo quando título/slug diferem.
-    Normaliza espaços nas bordas para não gerar hashes diferentes por
-    causa de um espaço/quebra de linha a mais no fim do texto."""
-    texto_normalizado = (conteudo_markdown or "").strip()
-    return hashlib.sha256(texto_normalizado.encode("utf-8")).hexdigest()
 
 
 class NoticiaRepository:
@@ -134,20 +124,8 @@ class NoticiaRepository:
         imagem_autor: str | None = None,
         imagem_link: str | None = None,
         imagem_query: str | None = None,
-        rss_guid: str | None = None,
-        provedor_llm: str | None = None,
-        modelo_llm: str | None = None,
-        tempo_geracao_ms: int | None = None,
     ) -> int:
         """Salva uma nova notícia. Retorna o ID gerado.
-
-        `hash_conteudo` é calculado automaticamente a partir de
-        `conteudo` (não precisa ser passado). `rss_guid` tem UNIQUE
-        constraint no banco -- se for informado e já existir uma
-        notícia com o mesmo guid, o INSERT falha com IntegrityError
-        (rollback automático). Use `buscar_por_rss_guid()` antes de
-        chamar `criar()` se quiser evitar essa exceção e tratar a
-        duplicidade de forma mais amigável.
 
         Se `imagem_url` for informado (deve ser a og:image extraída da
         matéria original, nunca uma foto genérica de banco de imagens),
@@ -171,13 +149,11 @@ class NoticiaRepository:
                     INSERT INTO noticias (
                         titulo, slug, resumo, conteudo_md, autor_id, categoria_id,
                         status, destaque, tempo_leitura, fonte, url_fonte,
-                        meta_title, meta_description, visualizacoes, data_publicacao,
-                        hash_conteudo, rss_guid, provedor_llm, modelo_llm, tempo_geracao_ms
+                        meta_title, meta_description, visualizacoes, data_publicacao
                     ) VALUES (
                         :titulo, :slug, :resumo, :conteudo_md, :autor_id, :categoria_id,
                         :status, false, :tempo_leitura, :fonte, :url_fonte,
-                        :meta_title, :meta_description, 0, NOW(),
-                        :hash_conteudo, :rss_guid, :provedor_llm, :modelo_llm, :tempo_geracao_ms
+                        :meta_title, :meta_description, 0, NOW()
                     )
                     RETURNING id
                 """),
@@ -194,11 +170,6 @@ class NoticiaRepository:
                     "url_fonte": url_fonte or "",
                     "meta_title": (meta_title or titulo)[:70],
                     "meta_description": (meta_description or resumo)[:165],
-                    "hash_conteudo": calcular_hash_conteudo(conteudo),
-                    "rss_guid": rss_guid,
-                    "provedor_llm": provedor_llm,
-                    "modelo_llm": modelo_llm,
-                    "tempo_geracao_ms": tempo_geracao_ms,
                 },
             )
             noticia_id = resultado.fetchone()[0]
@@ -263,27 +234,6 @@ class NoticiaRepository:
     def buscar_por_slug(self, slug: str):
         return self.db.execute(
             text("SELECT * FROM noticias WHERE slug = :slug"), {"slug": slug}
-        ).fetchone()
-
-    def buscar_por_rss_guid(self, rss_guid: str):
-        """Usado para checar duplicidade por GUID do RSS antes de gerar o
-        texto todo de novo (mais barato que checar só por slug depois)."""
-        if not rss_guid:
-            return None
-        return self.db.execute(
-            text("SELECT * FROM noticias WHERE rss_guid = :rss_guid"),
-            {"rss_guid": rss_guid},
-        ).fetchone()
-
-    def buscar_por_hash_conteudo(self, hash_conteudo: str):
-        """Detecta notícia com conteúdo repetido mesmo com título/slug
-        diferentes (ex.: a mesma matéria reescrita duas vezes pelo
-        LLM com títulos distintos)."""
-        if not hash_conteudo:
-            return None
-        return self.db.execute(
-            text("SELECT * FROM noticias WHERE hash_conteudo = :hash_conteudo"),
-            {"hash_conteudo": hash_conteudo},
         ).fetchone()
 
     def listar_titulos_recentes(self, limite: int = 100) -> list[str]:

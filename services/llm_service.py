@@ -191,28 +191,6 @@ PROVEDORES = [
 ]
 
 
-def gerar_texto(prompt: str, tentativas_por_provedor: int = 2) -> str:
-    """
-    Envia um prompt genérico para o mesmo fallback chain usado por
-    gerar_artigo() (Ollama -> OpenAI -> Claude -> Gemini), mas devolve
-    o texto bruto da resposta, sem parsing de título/resumo/corpo.
-    Usado pelos agentes que nao escrevem artigos completos:
-    pesquisador.py, revisor.py e seo.py.
-    """
-    erros = []
-    for nome, funcao in PROVEDORES:
-        for tentativa in range(1, tentativas_por_provedor + 1):
-            try:
-                print(f"[LLM] (gerar_texto) Tentando {nome} (tentativa {tentativa}/{tentativas_por_provedor})...")
-                return funcao(prompt)
-            except Exception as e:
-                print(f"[LLM] (gerar_texto) {nome} falhou: {e}")
-                erros.append(f"{nome}: {e}")
-                break
-
-    raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
-
-
 def gerar_artigo(tema: str, categoria: str = "Tecnologia", tentativas_por_provedor: int = 2) -> dict:
     """
     Tenta gerar artigo com cada provedor na ordem. Sempre imprime uma
@@ -241,5 +219,92 @@ def gerar_artigo(tema: str, categoria: str = "Tecnologia", tentativas_por_proved
             except ValueError as e:
                 print(f"[LLM] {nome} retornou resposta malformada (tentativa {tentativa}): {e}")
                 erros.append(f"{nome} (tentativa {tentativa}): resposta malformada — {e}")
+
+    raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
+
+
+# ---------------------------------------------------------------------------
+# NOVO — primitivos reutilizáveis por outros agentes (pesquisador, revisor,
+# seo). Nada acima desta linha foi alterado.
+# ---------------------------------------------------------------------------
+
+# Aliases públicos: outros agentes podem reaproveitar o mesmo parsing de
+# TITULO/RESUMO/TEMPO_LEITURA/===CORPO=== e a mesma geração de slug usados
+# por gerar_artigo(), sem duplicar essa lógica em cada agente.
+parsear_resposta_padrao = _parsear_resposta
+gerar_slug = _gerar_slug
+
+
+def gerar_texto(prompt: str, tentativas_por_provedor: int = 2) -> str:
+    """
+    Pede um texto livre a qualquer provedor disponível, usando a mesma
+    cadeia de fallback de gerar_artigo() (PROVEDORES, na mesma ordem),
+    mas SEM o parsing rígido de título/resumo/corpo — devolve a resposta
+    bruta do modelo. Para agentes que não precisam gerar um artigo
+    completo do zero (pesquisa, revisão, SEO).
+    """
+    erros = []
+    for nome, funcao in PROVEDORES:
+        for tentativa in range(1, tentativas_por_provedor + 1):
+            try:
+                print(f"[LLM] (gerar_texto) Tentando {nome} (tentativa {tentativa}/{tentativas_por_provedor})...")
+                texto = funcao(prompt)
+                if texto and texto.strip():
+                    return texto.strip()
+                raise RuntimeError("resposta vazia")
+            except Exception as e:
+                print(f"[LLM] (gerar_texto) {nome} falhou: {e}")
+                erros.append(f"{nome} (tentativa {tentativa}): {e}")
+                break
+
+    raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
+
+
+# Modelo específico por trás de cada entrada de PROVEDORES — usado só por
+# gerar_texto_com_metadados() para preencher modelo_llm. Mantido separado
+# de PROVEDORES pra não mexer na estrutura já usada por gerar_artigo() e
+# gerar_texto(). Se o modelo do Ollama mudar via OLLAMA_MODEL no .env,
+# isso já reflete automaticamente (é a mesma variável usada em _tentar_ollama).
+MODELO_POR_PROVEDOR = {
+    "Ollama local": OLLAMA_MODEL,
+    "OpenAI GPT-4o-mini": "gpt-4o-mini",
+    "Claude Haiku": "claude-haiku-4-5-20251001",
+    "Gemini 1.5 Flash": "gemini-2.0-flash",
+}
+
+
+def gerar_texto_com_metadados(prompt: str, tentativas_por_provedor: int = 2) -> dict:
+    """
+    Igual a gerar_texto(), mas além do texto devolve qual provedor/
+    modelo respondeu e quanto tempo levou (em ms) — para quem precisa
+    registrar isso para auditoria (ex.: editor.gerar_noticia_base(),
+    para preencher provedor_llm/modelo_llm/tempo_geracao_ms no
+    NoticiaRepository). gerar_texto() continua exatamente igual, sem
+    essa sobrecarga, para quem não precisa dessa informação.
+
+    Retorna {"texto": str, "provedor": str, "modelo": str, "tempo_ms": int}.
+    """
+    import time
+
+    erros = []
+    for nome, funcao in PROVEDORES:
+        for tentativa in range(1, tentativas_por_provedor + 1):
+            try:
+                print(f"[LLM] (gerar_texto_com_metadados) Tentando {nome} (tentativa {tentativa}/{tentativas_por_provedor})...")
+                inicio = time.monotonic()
+                texto = funcao(prompt)
+                tempo_ms = int((time.monotonic() - inicio) * 1000)
+                if texto and texto.strip():
+                    return {
+                        "texto": texto.strip(),
+                        "provedor": nome,
+                        "modelo": MODELO_POR_PROVEDOR.get(nome, ""),
+                        "tempo_ms": tempo_ms,
+                    }
+                raise RuntimeError("resposta vazia")
+            except Exception as e:
+                print(f"[LLM] (gerar_texto_com_metadados) {nome} falhou: {e}")
+                erros.append(f"{nome} (tentativa {tentativa}): {e}")
+                break
 
     raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
