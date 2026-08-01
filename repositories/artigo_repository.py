@@ -47,6 +47,11 @@ class ArtigoRepository:
         imagem_url: str | None = None,
         imagem_autor: str | None = None,
         imagem_link: str | None = None,
+        meta_title: str | None = None,
+        meta_description: str | None = None,
+        imagem_fonte: str | None = None,
+        imagem_query: str | None = None,
+        imagem_alt: str | None = None,
     ) -> int:
         """Salva um novo artigo. Retorna o ID gerado."""
         conteudo_html = markdown.markdown(conteudo_markdown)
@@ -57,11 +62,17 @@ class ArtigoRepository:
                 INSERT INTO artigos (
                     titulo, slug, resumo, conteudo_md, conteudo_html,
                     categoria_id, autor_id, status, tempo_leitura,
-                    imagem_url, imagem_autor, imagem_link, data_publicacao
+                    imagem_url, imagem_autor, imagem_link,
+                    imagem_fonte, imagem_query, imagem_alt,
+                    meta_title, meta_description,
+                    data_publicacao
                 ) VALUES (
                     :titulo, :slug, :resumo, :conteudo_md, :conteudo_html,
                     :categoria_id, :autor_id, :status, :tempo_leitura,
-                    :imagem_url, :imagem_autor, :imagem_link, NOW()
+                    :imagem_url, :imagem_autor, :imagem_link,
+                    :imagem_fonte, :imagem_query, :imagem_alt,
+                    :meta_title, :meta_description,
+                    NOW()
                 )
                 RETURNING id
             """),
@@ -78,6 +89,11 @@ class ArtigoRepository:
                 "imagem_url": imagem_url,
                 "imagem_autor": imagem_autor,
                 "imagem_link": imagem_link,
+                "imagem_fonte": imagem_fonte,
+                "imagem_query": imagem_query,
+                "imagem_alt": imagem_alt,
+                "meta_title": meta_title,
+                "meta_description": meta_description,
             },
         )
         self.db.commit()
@@ -121,3 +137,4 @@ class ArtigoRepository:
             """),
             {"limite": limite},
         ).fetchall()
+    
