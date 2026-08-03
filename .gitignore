@@ -12,3 +12,4 @@ venv/
 *.pem
 *.key
 *.p12
+actions-runner/

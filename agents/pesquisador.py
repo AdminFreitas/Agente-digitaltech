@@ -109,6 +109,10 @@ def pesquisar_noticias(max_itens: int = 8) -> list[dict]:
                     "link": entrada.get("link", ""),
                     "fonte": fonte,
                     "publicado_em": entrada.get("published", ""),
+                    # feedparser normaliza o <guid> do RSS (ou <id> do
+                    # Atom) neste atributo; cai pro link se o feed não
+                    # tiver guid nenhum, pra nunca ficar vazio à toa.
+                    "guid": entrada.get("id") or entrada.get("link", ""),
                 })
         except Exception as e:
             print(f"[Pesquisador] Feed '{url_feed}' falhou: {e}")
@@ -133,3 +137,32 @@ def _remover_duplicadas(itens: list[dict]) -> list[dict]:
             vistos.add(chave)
             unicos.append(item)
     return unicos
+
+
+def sugerir_tema(categoria: str, temas_recentes: list[str] | None = None) -> str:
+    """
+    Sugere um tema novo e específico de artigo evergreen dentro da
+    categoria, evitando repetir temas recentes. Existe para a
+    automação (cron) não depender de um tema fixo hardcoded a cada
+    execução — sem isso, rodar sem supervisão geraria sempre o mesmo
+    artigo (e falharia por slug duplicado a partir da 2ª execução).
+    """
+    from services.llm_service import gerar_texto
+
+    bloqueio = ""
+    if temas_recentes:
+        lista = "\n".join(f"- {t}" for t in temas_recentes[:15])
+        bloqueio = f"\nNÃO repita (nem algo muito parecido com) nenhum destes temas já publicados:\n{lista}\n"
+
+    prompt = f"""Você é um editor de pauta de um blog brasileiro de tecnologia.
+
+Categoria: {categoria}
+{bloqueio}
+Sugira UM tema específico e interessante para um artigo evergreen
+(atemporal) nessa categoria — algo prático, que gere tráfego de busca
+orgânica. Não seja genérico demais.
+
+Responda APENAS com o tema, em uma linha, sem numeração, sem aspas,
+sem explicação.
+"""
+    return gerar_texto(prompt).strip().strip('"').strip("'")

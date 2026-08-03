@@ -1,0 +1,32 @@
+name: Gerar Artigos Automaticamente
+
+on:
+  schedule:
+    - cron: "0 9,21 * * *"    # 06h e 18h no horário de Brasília (UTC-3)
+  workflow_dispatch:
+    inputs:
+      sem_publicar:
+        description: "Gerar como rascunho, sem publicar"
+        type: boolean
+        default: false
+
+jobs:
+  gerar:
+    runs-on: [self-hosted]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Subir serviços (Ollama, DB local, API)
+        working-directory: /home/michel/projetos/agente-ads
+        run: docker compose up -d
+
+      - name: Rodar pipeline de artigo
+        working-directory: /home/michel/projetos/agente-ads
+        run: |
+          if [ "${{ github.event.inputs.sem_publicar }}" = "true" ]; then
+            docker compose exec -T api python -m pipeline.workflow --tipo artigo --sem-publicar
+          else
+            docker compose exec -T api python -m pipeline.workflow --tipo artigo
+          fi
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

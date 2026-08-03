@@ -9,16 +9,17 @@ Ordem: Ollama (local, ilimitado) → OpenAI → Claude → Gemini
 import os
 import re
 import unicodedata
+import time
 from datetime import date
 from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_KEY    = os.getenv("OPENAI_API_KEY")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
-GEMINI_KEY    = os.getenv("GEMINI_API_KEY")
-OLLAMA_URL    = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL  = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 
 def _remover_acentos(texto: str) -> str:
@@ -149,7 +150,7 @@ def _tentar_claude(prompt: str) -> str:
     import anthropic
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
     resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-3-haiku-20240307",
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -161,7 +162,7 @@ def _tentar_gemini(prompt: str) -> str:
         raise RuntimeError("GEMINI_API_KEY não configurada")
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     resp = model.generate_content(prompt)
     if not resp.text:
         raise RuntimeError("Resposta vazia do Gemini")
@@ -170,24 +171,30 @@ def _tentar_gemini(prompt: str) -> str:
 
 def _tentar_ollama(prompt: str) -> str:
     import httpx
+    # Usa /api/chat (formato de conversa) em vez de /api/generate (completion)
     resp = httpx.post(
-        f"{OLLAMA_URL}/api/generate",
+        f"{OLLAMA_URL}/api/chat",
         json={
             "model": OLLAMA_MODEL,
-            "prompt": prompt,
+            "messages": [{"role": "user", "content": prompt}],
             "stream": False,
+            "options": {
+                "num_predict": 300,
+                "temperature": 0.7,
+                "num_ctx": 2048,
+            },
         },
-        timeout=1800,
+        timeout=120,
     )
     resp.raise_for_status()
-    return resp.json()["response"]
+    return resp.json()["message"]["content"]
 
 
 PROVEDORES = [
-    ("Ollama local",       _tentar_ollama),
+    ("Ollama local", _tentar_ollama),
     ("OpenAI GPT-4o-mini", _tentar_openai),
-    ("Claude Haiku",       _tentar_claude),
-    ("Gemini 1.5 Flash",   _tentar_gemini),
+    ("Claude Haiku", _tentar_claude),
+    ("Gemini 2.5 Flash", _tentar_gemini),
 ]
 
 
@@ -268,8 +275,8 @@ def gerar_texto(prompt: str, tentativas_por_provedor: int = 2) -> str:
 MODELO_POR_PROVEDOR = {
     "Ollama local": OLLAMA_MODEL,
     "OpenAI GPT-4o-mini": "gpt-4o-mini",
-    "Claude Haiku": "claude-haiku-4-5-20251001",
-    "Gemini 1.5 Flash": "gemini-2.0-flash",
+    "Claude Haiku": "claude-3-haiku-20240307",
+    "Gemini 2.5 Flash": "gemini-2.5-flash",
 }
 
 
@@ -284,8 +291,6 @@ def gerar_texto_com_metadados(prompt: str, tentativas_por_provedor: int = 2) -> 
 
     Retorna {"texto": str, "provedor": str, "modelo": str, "tempo_ms": int}.
     """
-    import time
-
     erros = []
     for nome, funcao in PROVEDORES:
         for tentativa in range(1, tentativas_por_provedor + 1):
