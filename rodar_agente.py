@@ -273,7 +273,8 @@ def _gerar_artigo(publicar: bool = False):
 
     _banner("INICIANDO GERAÇÃO DE ARTIGO")
 
-    tema = pesquisador.sugerir_tema()
+    categoria = "Tecnologia"
+    tema = pesquisador.sugerir_tema(categoria)
     _log(f"Tema sugerido: {tema}")
 
     db = SessionLocal()
@@ -281,7 +282,7 @@ def _gerar_artigo(publicar: bool = False):
         resultado = gerar_e_processar_artigo(
             db,
             tema=tema,
-            categoria="Tecnologia",
+            categoria=categoria,
             publicar_imediatamente=publicar,
         )
         _log(f"✅ Artigo salvo: ID={resultado['id']} | slug={resultado['slug']}")

@@ -175,7 +175,7 @@ def _tentar_gemini(prompt: str) -> str:
         raise RuntimeError("GEMINI_API_KEY não configurada")
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_KEY)   # gemini-2.5-flash foi descontinuado para novos usuários
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    model = genai.GenerativeModel("gemini-3.1-flash-lite")
     resp = model.generate_content(prompt)
     if not resp.text:
         raise RuntimeError("Resposta vazia do Gemini")

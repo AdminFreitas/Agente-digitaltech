@@ -18,7 +18,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from rodar_agente import _rodar_artigo, _rodar_noticia, _publicar_pendentes, _log
+from rodar_agente import _gerar_artigo, _gerar_noticia, _publicar_pendentes, _log
 
 
 def main() -> int:
@@ -44,11 +44,11 @@ def main() -> int:
 
     if args.tipo in ("noticia", "ambos"):
         _log("[Workflow] Executando pipeline de notícias...")
-        ok_noticia = _rodar_noticia(publicar=publicar)
+        ok_noticia = _gerar_noticia(publicar=publicar)
 
     if args.tipo in ("artigo", "ambos"):
         _log("[Workflow] Executando pipeline de artigos...")
-        ok_artigo = _rodar_artigo(publicar=publicar)
+        ok_artigo = _gerar_artigo(publicar=publicar)
 
     # Se estiver publicando, também publica pendentes
     if publicar:
