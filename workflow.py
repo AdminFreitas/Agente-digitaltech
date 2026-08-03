@@ -1,44 +1,29 @@
 """
-pipeline/workflow.py — Ponto de entrada para o self-hosted runner do
-GitHub Actions
+workflow.py — Ponto de entrada para GitHub Actions
 
-Não reimplementa a geração de artigo/notícia — importa e chama
-rodar_artigo()/rodar_noticia() de scripts/rodar_agente.py, a MESMA
-lógica usada pelo cron local (sugestão de tema via LLM, sessões
-curtas, mesmo tratamento de erro). Existe como arquivo separado só
-para dar um ponto de entrada com nome claro dentro dos workflows do
-GitHub Actions (fica mais fácil de achar nos logs do Actions) e para
-aceitar --tipo/--sem-publicar, que fazem mais sentido num
-workflow_dispatch com inputs do que os --artigo/--noticia do script
-de cron.
-
-IMPORTANTE: se precisar mudar como o tema é escolhido, como as sessões
-do banco são abertas, etc., mude em scripts/rodar_agente.py — este
-arquivo não deve ganhar lógica própria. A versão anterior deste
-arquivo usava uma lista BACKLOG_TEMAS com índice salvo em
-.backlog_state.json — isso foi removido porque o actions/checkout
-(comportamento padrão: clean=true) apaga esse arquivo a cada execução,
-o que travava o índice sempre em 0 e fazia o agente tentar gerar o
-mesmo tema repetidas vezes. sugerir_tema() não tem esse problema
-porque consulta o histórico direto no Neon, que persiste de verdade
-entre execuções.
+Compatibilidade: importa e chama rodar_agente.py na raiz.
+Mantém os mesmos argumentos --tipo e --sem-publicar para não quebrar
+workflows existentes, mas delega toda a lógica para o CLI principal.
 
 Uso:
-    python -m pipeline.workflow                  # notícia + artigo, publica direto
-    python -m pipeline.workflow --tipo noticia    # só notícia
-    python -m pipeline.workflow --tipo artigo     # só artigo
-    python -m pipeline.workflow --sem-publicar    # gera como rascunho, sem publicar
+    python workflow.py                    # notícia + artigo, publica direto
+    python workflow.py --tipo noticia     # só notícia
+    python workflow.py --tipo artigo      # só artigo
+    python workflow.py --sem-publicar     # gera como rascunho
 """
 
 import argparse
 import sys
+import os
 
-from scripts.rodar_agente import rodar_artigo, rodar_noticia
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from rodar_agente import _rodar_artigo, _rodar_noticia, _publicar_pendentes, _log
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Executa o agente DigitalTech via GitHub Actions self-hosted runner"
+        description="Executa o agente DigitalTech via GitHub Actions"
     )
     parser.add_argument(
         "--tipo",
@@ -52,16 +37,23 @@ def main() -> int:
         help="Salva como rascunho em vez de publicar direto",
     )
     args = parser.parse_args()
-    publicar = not args.sem_publicar
 
+    publicar = not args.sem_publicar
     ok_noticia = True
     ok_artigo = True
 
     if args.tipo in ("noticia", "ambos"):
-        ok_noticia = rodar_noticia(publicar=publicar)
+        _log("[Workflow] Executando pipeline de notícias...")
+        ok_noticia = _rodar_noticia(publicar=publicar)
 
     if args.tipo in ("artigo", "ambos"):
-        ok_artigo = rodar_artigo(publicar=publicar)
+        _log("[Workflow] Executando pipeline de artigos...")
+        ok_artigo = _rodar_artigo(publicar=publicar)
+
+    # Se estiver publicando, também publica pendentes
+    if publicar:
+        _log("[Workflow] Verificando rascunhos pendentes...")
+        _publicar_pendentes()
 
     return 0 if (ok_noticia and ok_artigo) else 1
 

@@ -10,4 +10,3 @@ markdown==3.7
 openai>=1.0.0
 anthropic>=0.25.0
 feedparser==6.0.11
-

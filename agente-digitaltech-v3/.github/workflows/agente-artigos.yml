@@ -2,23 +2,20 @@ name: Gerar Conteúdo DigitalTech
 
 on:
   schedule:
-    - cron: "0 9,21 * * *"  # 06h e 18h BRT (UTC-3)
+    - cron: "0 9,21 * * *"  # 06h e 18h BRT
   workflow_dispatch:
     inputs:
       tipo:
         description: "Tipo de conteúdo"
         type: choice
-        options:
-          - ambos
-          - artigo
-          - noticia
+        options: [ambos, artigo, noticia]
         default: ambos
       sem_publicar:
-        description: "Gerar como rascunho, sem publicar"
+        description: "Gerar como rascunho"
         type: boolean
         default: false
       publicar_pendentes:
-        description: "Também publicar rascunhos pendentes"
+        description: "Publicar rascunhos pendentes"
         type: boolean
         default: true
 
@@ -41,16 +38,13 @@ jobs:
 
       - name: Diagnóstico pré-execução
         run: |
-          echo "=== Diagnóstico do Agente ==="
+          echo "=== Diagnóstico ==="
           python rodar_agente.py --diagnostico || true
-          echo "=============================="
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
           OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
           GITHUB_REPOSITORY: ${{ secrets.GITHUB_REPOSITORY }}
@@ -58,31 +52,17 @@ jobs:
       - name: Executar pipeline
         run: |
           TIPO="${{ github.event.inputs.tipo || 'ambos' }}"
-          SEM_PUBLICAR="${{ github.event.inputs.sem_publicar }}"
-          PUBLICAR_PENDENTES="${{ github.event.inputs.publicar_pendentes }}"
-
           ARGS="--tipo $TIPO"
-
-          if [ "$SEM_PUBLICAR" = "true" ]; then
-            ARGS="$ARGS --sem-publicar"
-          fi
-
-          echo "Executando: python workflow.py $ARGS"
+          [ "${{ github.event.inputs.sem_publicar }}" = "true" ] && ARGS="$ARGS --sem-publicar"
           python workflow.py $ARGS
-
-          # Publica pendentes se solicitado
-          if [ "$PUBLICAR_PENDENTES" = "true" ] && [ "$SEM_PUBLICAR" != "true" ]; then
-            echo "Publicando rascunhos pendentes..."
-            python rodar_agente.py --publicar || true
-          fi
+          [ "${{ github.event.inputs.publicar_pendentes }}" = "true" ] && [ "${{ github.event.inputs.sem_publicar }}" != "true" ] && python rodar_agente.py --publicar || true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
           OLLAMA_MODEL: ${{ secrets.OLLAMA_MODEL }}
           OLLAMA_TIMEOUT: ${{ secrets.OLLAMA_TIMEOUT }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_BASE_URL: ${{ secrets.OPENROUTER_BASE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
           GITHUB_REPOSITORY: ${{ secrets.GITHUB_REPOSITORY }}
@@ -91,9 +71,8 @@ jobs:
       - name: Status pós-execução
         if: always()
         run: |
-          echo "=== Status Final ==="
+          echo "=== Status ==="
           python rodar_agente.py --status || true
-          echo "===================="
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
