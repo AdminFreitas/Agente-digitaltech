@@ -282,7 +282,7 @@ def _extrair_imagem_do_rss(url_fonte: str) -> dict | None:
         html = resp.text
 
         # Tenta og:image
-        og_match = re.search(r'<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']', html, re.IGNORECASE)
+        og_match = re.search(r"<meta[^>]+property=[\"']og:image[\"'][^>]+content=[\"']([^\"']+)[\"']", html, re.IGNORECASE)
         if og_match:
             img_url = og_match.group(1)
             return {
@@ -295,7 +295,7 @@ def _extrair_imagem_do_rss(url_fonte: str) -> dict | None:
             }
 
         # Tenta twitter:image
-        tw_match = re.search(r'<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']', html, re.IGNORECASE)
+        tw_match = re.search(r"<meta[^>]+name=[\"']twitter:image[\"'][^>]+content=[\"']([^\"']+)[\"']", html, re.IGNORECASE)
         if tw_match:
             img_url = tw_match.group(1)
             return {
@@ -308,7 +308,7 @@ def _extrair_imagem_do_rss(url_fonte: str) -> dict | None:
             }
 
         # Tenta primeira imagem grande no corpo do artigo
-        img_match = re.search(r'<img[^>]+src=["'](https?://[^"']+)["'][^>]*>', html, re.IGNORECASE)
+        img_match = re.search(r"<img[^>]+src=[\"'](https?://[^\"']+)[\"'][^>]*>", html, re.IGNORECASE)
         if img_match:
             img_url = img_match.group(1)
             # Evita ícones e imagens pequenas
