@@ -1,0 +1,37 @@
+[2026-08-06 13:01:56] ============================================================
+[2026-08-06 13:01:56] DIAGNÓSTICO DO AGENTE DIGITALTECH
+[2026-08-06 13:01:56] ============================================================
+[2026-08-06 13:01:57] [1/2] Verificando Ollama...
+  URL: http://127.0.0.1:11434
+  Servidor acessível: ✅ SIM
+  Modelo configurado: qwen2.5:3b
+  Modelo disponível: ✅ SIM
+  Modelos instalados: gemma3:latest, qwen2.5:3b, nomic-embed-text:latest, llama3.2:3b, qwen2.5-coder:1.5b, qwen3:8b, llama3:latest
+[2026-08-06 13:01:57] [2/2] Teste rápido Ollama (prompt simples)...
+[Ollama] Enviando (timeout=400s, model=qwen2.5:3b)...
+[Ollama] ✅ 36.3s | prompt_eval=42 | eval=3
+  Resultado: ✅ OK
+  Resposta: 'TESTE'
+  Tempo: 36295ms
+[2026-08-06 13:02:33] [3/3] Verificando TODAS as APIs externas...
+  Ordem de fallback: ['Ollama local', 'Groq', 'Gemini Flash', 'HuggingFace']
+
+  Groq                      ✅ OK (0.4s)
+  Gemini Flash              ✅ OK (6.4s)
+  HuggingFace               ✅ OK (1.7s)
+[2026-08-06 13:02:42] [4/5] Verificando banco de dados...
+  Conexão: ✅ OK
+[2026-08-06 13:02:46] [5/5] Verificando GitHub...
+  Token: ✅ OK (usuário: AdminFreitas)
+[2026-08-06 13:02:46] ============================================================
+[2026-08-06 13:02:46] RESUMO DO DIAGNÓSTICO
+[2026-08-06 13:02:46] ============================================================
+  Ollama:     ✅ OK
+  Groq                      ✅ OK (0.4s)
+  Gemini Flash              ✅ OK (6.4s)
+  HuggingFace               ✅ OK (1.7s)
+  Banco:      ✅ OK
+  GitHub:     ✅ OK
+
+  ✅ Provedores funcionais: 4
+     Pipeline pode rodar.

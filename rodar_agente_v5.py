@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-rodar_agente.py — CLI unificado do Agente DigitalTech (v5.1 — corrigido)
+rodar_agente.py — CLI unificado do Agente DigitalTech (v5)
 
 Correções desta versão:
-- v5.1: Diagnóstico agora reconhece o Groq (estava mapeado só como "Grok"/xAI
-        no dicionário de chaves, então o Groq nunca era testado de verdade)
-- v5:   Diagnóstico testa TODOS os provedores do llm_service.py automaticamente
-        (OpenAI, Claude, Gemini, DeepSeek, HuggingFace, Groq, Grok, Ollama)
-        Não mais hardcoded na lógica de execução — lê a lista diretamente do
-        llm_service.PROVEDORES (mas o mapa de chaves abaixo precisa cobrir
-        todo nome que aparecer em PROVEDORES, ver nota no código)
+- v5: Diagnóstico testa TODOS os provedores do llm_service.py automaticamente
+      (OpenAI, Claude, Gemini, DeepSeek, HuggingFace, Grok, Ollama)
+      Não mais hardcoded — lê a lista diretamente do llm_service.PROVEDORES
 - v4.1: sugerir_tema(categoria=...), gerar_e_processar_artigo() sem db
 - v4.1: NoticiaRepository.publicar() restaurado
 - v4: exit code 1 se falhar
@@ -39,14 +35,12 @@ from services.llm_service import (
     _tentar_gemini,
     _tentar_deepseek,
     _tentar_huggingface,
-    _tentar_groq,
     _tentar_grok,
     OPENAI_KEY,
     ANTHROPIC_KEY,
     GEMINI_KEY,
     DEEPSEEK_KEY,
     HF_KEY,
-    GROQ_KEY,
     GROK_KEY,
     OLLAMA_URL,
     OLLAMA_MODEL,
@@ -68,13 +62,10 @@ def _banner(texto: str):
 
 
 # ---------------------------------------------------------------------------
-# DIAGNÓSTICO — v5.1: testa TODOS os provedores automaticamente
+# DIAGNÓSTICO — v5: testa TODOS os provedores automaticamente
 # ---------------------------------------------------------------------------
 
 # Mapeamento de chave por nome de provedor (para o diagnóstico saber se testar)
-# IMPORTANTE: a chave deste dicionário precisa bater EXATAMENTE com o nome
-# retornado em llm_service._PROVEDORES_DISPONIVEIS (ex.: "Groq", não "Grok").
-# Se um provedor novo for adicionado lá, precisa ser adicionado aqui também.
 _CHAVES_POR_PROVEDOR = {
     "Ollama local":    None,  # sem chave
     "OpenAI GPT":      OPENAI_KEY,
@@ -82,7 +73,6 @@ _CHAVES_POR_PROVEDOR = {
     "Gemini Flash":    GEMINI_KEY,
     "DeepSeek":        DEEPSEEK_KEY,
     "HuggingFace":     HF_KEY,
-    "Groq":            GROQ_KEY,
     "Grok":            GROK_KEY,
 }
 
@@ -136,16 +126,11 @@ def _diagnostico_apis():
     resultados = {}
 
     for nome_provedor, funcao in PROVEDORES:
+        chave = _CHAVES_POR_PROVEDOR.get(nome_provedor)
+
         # Ollama já foi testado separadamente
         if nome_provedor == "Ollama local":
             continue
-
-        if nome_provedor not in _CHAVES_POR_PROVEDOR:
-            print(f"  {nome_provedor:<25} ⚠️  provedor sem entrada em _CHAVES_POR_PROVEDOR (bug no diagnóstico, não no provedor)")
-            resultados[nome_provedor] = {"ok": False, "erro": "Provedor não mapeado no diagnóstico"}
-            continue
-
-        chave = _CHAVES_POR_PROVEDOR.get(nome_provedor)
 
         if chave is None:
             print(f"  {nome_provedor:<25} ⚠️  CHAVE NÃO CONFIGURADA no .env")

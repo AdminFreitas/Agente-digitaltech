@@ -1,0 +1,191 @@
+"""
+main.py — Exemplo de integração do Dashboard DigitalTech
+============================================================
+
+Este é um EXEMPLO de como configurar seu FastAPI para servir
+o dashboard e aceitar requisições CORS.
+
+ADAPTE conforme a estrutura do seu projeto real.
+"""
+
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List
+import uvicorn
+
+# ============================================================
+# 1. CRIE O APP
+# ============================================================
+app = FastAPI(
+    title="DigitalTech API",
+    description="Agente editorial automatizado com painel web",
+    version="1.0.0"
+)
+
+# ============================================================
+# 2. CORS — PERMITE QUE O FRONTEND ACESSE A API
+# ============================================================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # Em produção: ["https://seu-dominio.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ============================================================
+# 3. MODELOS Pydantic (para validação de requests)
+# ============================================================
+
+class GerarArtigoRequest(BaseModel):
+    tema: str
+    categoria: str
+    tom: str = "divulgativo"
+    tamanho: str = "medio"
+    publicar: bool = True
+    modelo: str = "llama3.1:70b"
+
+class GerarNoticiaRequest(BaseModel):
+    tema: str
+    categoria: str
+    publicar: bool = True
+    modelo: str = "llama3.1:70b"
+
+class ArtigoResponse(BaseModel):
+    id: int
+    titulo: str
+    status: str
+    url_github: Optional[str] = None
+
+class HealthResponse(BaseModel):
+    status: str
+    ollama: bool
+    database: bool
+    github: bool
+
+# ============================================================
+# 4. ROTAS DA API (todas com prefixo /api)
+# ============================================================
+
+@app.get("/api/health", response_model=HealthResponse)
+async def health_check():
+    """Retorna o status de saúde do sistema."""
+    # Aqui você verifica de verdade:
+    # - Se Ollama está respondendo
+    # - Se o banco está conectado
+    # - Se GitHub API está autenticado
+    return {
+        "status": "ok",
+        "ollama": True,
+        "database": True,
+        "github": True
+    }
+
+
+@app.post("/api/artigos/gerar", response_model=ArtigoResponse)
+async def gerar_artigo(request: GerarArtigoRequest):
+    """
+    Gera um novo artigo usando o agente editorial.
+
+    - Se publicar=True, publica direto no GitHub
+    - Se publicar=False, salva como rascunho no banco
+    """
+    # AQUI VOCÊ INTEGRA COM SEU PIPELINE EXISTENTE:
+    #
+    # 1. Chama o agente para gerar o conteúdo
+    # 2. Salva no banco de dados
+    # 3. Se publicar=True, envia para o GitHub
+    #
+    # Exemplo:
+    # artigo = await agente.gerar_artigo(
+    #     tema=request.tema,
+    #     categoria=request.categoria,
+    #     tom=request.tom,
+    #     tamanho=request.tamanho,
+    #     modelo=request.modelo
+    # )
+    # 
+    # if request.publicar:
+    #     url = await github.publicar(artigo)
+    #     artigo.status = "publicado"
+    #     artigo.url_github = url
+    #
+    # db.save(artigo)
+
+    # Resposta simulada (substitua pela sua lógica real):
+    return {
+        "id": 26,
+        "titulo": request.tema,
+        "status": "publicado" if request.publicar else "rascunho",
+        "url_github": "https://github.com/seu-repo/artigos/26" if request.publicar else None
+    }
+
+
+@app.post("/api/noticias/gerar", response_model=ArtigoResponse)
+async def gerar_noticia(request: GerarNoticiaRequest):
+    """Gera uma notícia com base em fontes atuais."""
+    # Integração com seu pipeline de notícias
+    return {
+        "id": 12,
+        "titulo": request.tema,
+        "status": "publicado" if request.publicar else "rascunho",
+        "url_github": "https://github.com/seu-repo/noticias/12" if request.publicar else None
+    }
+
+
+@app.get("/api/artigos", response_model=List[ArtigoResponse])
+async def listar_artigos():
+    """Lista todos os artigos do banco de dados."""
+    # Busca no banco de dados
+    return [
+        {"id": 25, "titulo": "Green Light IA", "status": "rascunho", "url_github": None},
+        {"id": 24, "titulo": "APIs REST: Boas práticas", "status": "publicado", "url_github": "https://github.com/seu-repo/artigos/24"},
+        {"id": 23, "titulo": "PostgreSQL vs MySQL", "status": "publicado", "url_github": "https://github.com/seu-repo/artigos/23"},
+    ]
+
+
+@app.post("/api/artigos/publicar/{artigo_id}", response_model=ArtigoResponse)
+async def publicar_artigo(artigo_id: int):
+    """Publica um artigo rascunho no GitHub."""
+    # 1. Busca o artigo no banco
+    # 2. Envia para o GitHub
+    # 3. Atualiza status para "publicado"
+    return {
+        "id": artigo_id,
+        "titulo": "Green Light IA",
+        "status": "publicado",
+        "url_github": f"https://github.com/seu-repo/artigos/{artigo_id}"
+    }
+
+
+@app.delete("/api/artigos/{artigo_id}")
+async def excluir_artigo(artigo_id: int):
+    """Remove um artigo do banco de dados."""
+    # db.delete(artigo_id)
+    return {"message": f"Artigo #{artigo_id} excluído com sucesso"}
+
+
+# ============================================================
+# 5. SERVIR ARQUIVOS ESTÁTICOS (DASHBOARD)
+# ============================================================
+# 
+# IMPORTANTE: O StaticFiles deve vir DEPOIS de todas as rotas API.
+# Ele captura QUALQUER requisição que não corresponda a uma
+# rota definida acima e tenta servir um arquivo da pasta static/.
+#
+# Isso significa que:
+#   GET /api/health        → vai para a rota health_check
+#   GET /                  → vai para static/index.html (dashboard)
+#   GET /css/style.css     → vai para static/css/style.css
+# ============================================================
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+# ============================================================
+# 6. RODAR O SERVIDOR
+# ============================================================
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

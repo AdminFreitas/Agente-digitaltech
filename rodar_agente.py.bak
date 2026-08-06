@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-rodar_agente.py — CLI unificado do Agente DigitalTech (CORRIGIDO v4.1)
+rodar_agente.py — CLI unificado do Agente DigitalTech
 
-Correções desta versão:
-- v4: _gerar_artigo() passa 'categoria' para sugerir_tema(), não passa 'db'
-  para gerar_e_processar_artigo() (ela abre sessões curtas internamente)
-- v4: main() retorna exit code 1 se qualquer pipeline falhar
-- v4: _publicar_pendentes() retorna True/False
-- v4.1: publicação de notícias volta a usar NoticiaRepository.publicar()
-  (não SQL cru — evita chutar nome de coluna e respeita lógica do repo)
+Pipeline:
+  --artigos      → gera artigo evergreen (sugerir_tema → editor → revisor → seo → salvar)
+  --noticias     → gera notícia via RSS (pesquisador RSS → editor → revisor → seo → salvar)
+  --publicar     → publica rascunhos pendentes no GitHub
+  --executar     → artigo + notícia (padrão)
+  --pipeline-completo → artigo + notícia + publicar pendentes
+  --diagnostico  → testa Ollama, APIs externas, banco, GitHub
+  --status       → mostra resumo do banco (quantos rascunhos/publicados)
+
+Compatível com llm_service.py v3 (timeout Ollama 400s, Gemini 3.6 Flash,
+Claude claude-haiku-4-5-20251001).
 
 Uso:
     python rodar_agente.py --artigos --sem-publicar
@@ -24,8 +28,10 @@ import sys
 import time
 from datetime import datetime
 
+# Garante que encontra os módulos do projeto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config.database import SessionLocal, engine
 from services.llm_service import (
     _tentar_ollama,
     _tentar_openai,
@@ -58,9 +64,12 @@ def _banner(texto: str):
 # ---------------------------------------------------------------------------
 
 def _diagnostico_ollama():
+    """Testa servidor Ollama e modelo configurado."""
     import httpx
+
     _log("[1/5] Verificando Ollama...")
     print(f"  URL: {OLLAMA_URL}")
+
     try:
         resp = httpx.get(f"{OLLAMA_URL}/api/tags", timeout=10)
         servidor_ok = resp.status_code == 200
@@ -78,9 +87,11 @@ def _diagnostico_ollama():
     disponivel = any(OLLAMA_MODEL in n for n in nomes)
     print(f"  Modelo disponível: {'✅ SIM' if disponivel else '❌ NÃO'}")
     print(f"  Modelos instalados: {', '.join(nomes[:10])}")
+
     if not disponivel:
         return False
 
+    # Teste rápido de geração
     _log("[2/5] Teste rápido Ollama (prompt simples)...")
     inicio = time.monotonic()
     try:
@@ -98,18 +109,22 @@ def _diagnostico_ollama():
 
 
 def _diagnostico_apis():
+    """Testa cada API externa com prompt mínimo."""
     _log("[3/5] Verificando APIs externas...")
+
     provedores = [
         ("OpenAI GPT-4o-mini", OPENAI_KEY, _tentar_openai),
         ("Claude Haiku", ANTHROPIC_KEY, _tentar_claude),
         ("Gemini 3.6 Flash", GEMINI_KEY, _tentar_gemini),
     ]
+
     resultados = {}
     for nome, chave, funcao in provedores:
         if not chave:
             print(f"  {nome}: ⚠️  CHAVE AUSENTE no .env")
             resultados[nome] = {"ok": False, "erro": "Chave não configurada"}
             continue
+
         inicio = time.monotonic()
         try:
             resposta = funcao("Responda apenas PONG.")
@@ -122,16 +137,17 @@ def _diagnostico_apis():
             print(f"  {nome}: ❌ FALHA ({tempo:.1f}s)")
             print(f"    → {erro}")
             resultados[nome] = {"ok": False, "erro": erro}
+
     return resultados
 
 
 def _diagnostico_banco():
-    from config.database import SessionLocal
-    from sqlalchemy import text
+    """Testa conexão com PostgreSQL/Neon."""
     _log("[4/5] Verificando banco de dados...")
     try:
         db = SessionLocal()
-        db.execute(text("SELECT 1")).fetchone()
+        from sqlalchemy import text
+        resultado = db.execute(text("SELECT 1")).fetchone()
         db.close()
         print(f"  Conexão: ✅ OK")
         return True
@@ -141,11 +157,13 @@ def _diagnostico_banco():
 
 
 def _diagnostico_github():
+    """Testa token do GitHub."""
     _log("[5/5] Verificando GitHub...")
     token = os.getenv("GITHUB_TOKEN")
     if not token:
-        print(f"  Token: ⚠️  AUSENTE no .env")
+        print(f"  Token: ⚠️  AUSENTE no .env (publicação no GitHub não funcionará)")
         return False
+
     import httpx
     try:
         resp = httpx.get(
@@ -167,6 +185,7 @@ def _diagnostico_github():
 
 def _mostrar_diagnostico():
     _banner("DIAGNÓSTICO DO AGENTE DIGITALTECH")
+
     ollama_ok = _diagnostico_ollama()
     apis = _diagnostico_apis()
     banco_ok = _diagnostico_banco()
@@ -174,10 +193,12 @@ def _mostrar_diagnostico():
 
     _banner("RESUMO DO DIAGNÓSTICO")
     print(f"  Ollama:     {'✅ OK' if ollama_ok else '❌ FALHA'}")
+
     for nome, dados in apis.items():
         status = "✅ OK" if dados.get("ok") else "❌ FALHA"
         extra = f" ({dados.get('tempo', 0):.1f}s)" if dados.get("ok") else ""
         print(f"  {nome:<25} {status}{extra}")
+
     print(f"  Banco:      {'✅ OK' if banco_ok else '❌ FALHA'}")
     print(f"  GitHub:     {'✅ OK' if github_ok else '⚠️  NÃO CONFIGURADO'}")
 
@@ -193,12 +214,15 @@ def _mostrar_diagnostico():
 # ---------------------------------------------------------------------------
 
 def _mostrar_status():
-    from config.database import SessionLocal
-    from sqlalchemy import text
     _banner("STATUS DO AGENTE DIGITALTECH")
     try:
         db = SessionLocal()
-        artigos = db.execute(text("SELECT status, COUNT(*) as total FROM artigos GROUP BY status")).fetchall()
+        from sqlalchemy import text
+
+        # Artigos
+        artigos = db.execute(text("""
+            SELECT status, COUNT(*) as total FROM artigos GROUP BY status
+        """)).fetchall()
         print("  Artigos:")
         if artigos:
             for row in artigos:
@@ -206,7 +230,10 @@ def _mostrar_status():
         else:
             print("    Nenhum artigo encontrado")
 
-        noticias = db.execute(text("SELECT status, COUNT(*) as total FROM noticias GROUP BY status")).fetchall()
+        # Notícias
+        noticias = db.execute(text("""
+            SELECT status, COUNT(*) as total FROM noticias GROUP BY status
+        """)).fetchall()
         print("  Notícias:")
         if noticias:
             for row in noticias:
@@ -214,12 +241,21 @@ def _mostrar_status():
         else:
             print("    Nenhuma notícia encontrada")
 
+        # Últimos 3 de cada
         print("\n  Últimos artigos:")
-        for a in db.execute(text("SELECT slug, titulo, status, criado_em FROM artigos ORDER BY criado_em DESC LIMIT 3")).fetchall():
+        ultimos_artigos = db.execute(text("""
+            SELECT slug, titulo, status, criado_em
+            FROM artigos ORDER BY criado_em DESC LIMIT 3
+        """)).fetchall()
+        for a in ultimos_artigos:
             print(f"    [{a.status}] {a.titulo[:50]}... ({a.criado_em})")
 
         print("\n  Últimas notícias:")
-        for n in db.execute(text("SELECT slug, titulo, status, criado_em FROM noticias ORDER BY criado_em DESC LIMIT 3")).fetchall():
+        ultimas_noticias = db.execute(text("""
+            SELECT slug, titulo, status, criado_em
+            FROM noticias ORDER BY criado_em DESC LIMIT 3
+        """)).fetchall()
+        for n in ultimas_noticias:
             print(f"    [{n.status}] {n.titulo[:50]}... ({n.criado_em})")
 
         db.close()
@@ -237,14 +273,15 @@ def _gerar_artigo(publicar: bool = False):
 
     _banner("INICIANDO GERAÇÃO DE ARTIGO")
 
-    categoria = "Tecnologia"
-    tema = pesquisador.sugerir_tema(categoria=categoria)
-    _log(f"Tema sugerido ({categoria}): {tema}")
+    tema = pesquisador.sugerir_tema()
+    _log(f"Tema sugerido: {tema}")
 
+    db = SessionLocal()
     try:
         resultado = gerar_e_processar_artigo(
+            db,
             tema=tema,
-            categoria=categoria,
+            categoria="Tecnologia",
             publicar_imediatamente=publicar,
         )
         _log(f"✅ Artigo salvo: ID={resultado['id']} | slug={resultado['slug']}")
@@ -259,6 +296,8 @@ def _gerar_artigo(publicar: bool = False):
     except Exception as exc:
         _log(f"❌ Erro ao gerar artigo: {exc}")
         return False
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +306,9 @@ def _gerar_artigo(publicar: bool = False):
 
 def _gerar_noticia(publicar: bool = False):
     from pipeline.gerar_noticias import gerar_e_processar_noticia
+
     _banner("INICIANDO GERAÇÃO DE NOTÍCIA")
+
     try:
         resultado = gerar_e_processar_noticia(
             categoria="Tecnologia",
@@ -287,27 +328,28 @@ def _gerar_noticia(publicar: bool = False):
 
 
 # ---------------------------------------------------------------------------
-# PUBLICAR PENDENTES (v4.1 — usa NoticiaRepository.publicar())
+# PUBLICAR PENDENTES
 # ---------------------------------------------------------------------------
 
 def _publicar_pendentes():
     from agents import publisher
     from repositories.artigo_repository import ArtigoRepository
     from repositories.noticia_repository import NoticiaRepository
-    from config.database import SessionLocal
-    from sqlalchemy import text
 
     _banner("PUBLICANDO RASCUNHOS PENDENTES")
 
     db = SessionLocal()
-    publicados = 0
-    falhas = 0
     try:
+        artigos_repo = ArtigoRepository(db)
+        noticias_repo = NoticiaRepository(db)
+
         # Artigos pendentes
+        from sqlalchemy import text
         pendentes_artigos = db.execute(text(
             "SELECT id, slug, titulo FROM artigos WHERE status = 'rascunho'"
         )).fetchall()
 
+        publicados = 0
         for artigo in pendentes_artigos:
             try:
                 publisher.publicar(db, artigo.id)
@@ -315,10 +357,8 @@ def _publicar_pendentes():
                 publicados += 1
             except Exception as e:
                 _log(f"❌ Falha ao publicar artigo {artigo.id}: {e}")
-                falhas += 1
 
-        # Notícias pendentes — CORREÇÃO v4.1: volta a usar NoticiaRepository
-        noticias_repo = NoticiaRepository(db)
+        # Notícias pendentes (se houver suporte no publisher)
         pendentes_noticias = db.execute(text(
             "SELECT id, slug, titulo FROM noticias WHERE status = 'rascunho'"
         )).fetchall()
@@ -330,23 +370,18 @@ def _publicar_pendentes():
                 publicados += 1
             except Exception as e:
                 _log(f"❌ Falha ao publicar notícia {noticia.id}: {e}")
-                falhas += 1
 
-        if publicados == 0 and falhas == 0:
+        if publicados == 0:
             _log("Nenhum rascunho pendente encontrado.")
-            return True
-        elif falhas > 0:
-            _log(f"Total: {publicados} publicados, {falhas} falhas")
-            return False
         else:
             _log(f"Total publicado: {publicados}")
-            return True
+
     finally:
         db.close()
 
 
 # ---------------------------------------------------------------------------
-# AGENDAMENTO
+# AGENDAMENTO (instruções)
 # ---------------------------------------------------------------------------
 
 def _mostrar_agendamento():
@@ -400,6 +435,7 @@ def main():
 
     args = parser.parse_args()
 
+    # Se nenhum argumento, mostra ajuda
     if not any([
         args.executar, args.agendar, args.noticias, args.artigos,
         args.publicar, args.pipeline_completo, args.diagnostico, args.status,
@@ -423,6 +459,7 @@ def main():
 
     resultados = {"artigo": None, "noticia": None, "publicacao": None}
 
+    # Pipeline completo = artigos + notícias + publicar
     rodar_artigos = args.artigos or args.executar or args.pipeline_completo
     rodar_noticias = args.noticias or args.executar or args.pipeline_completo
     rodar_publicar = args.publicar or args.pipeline_completo
@@ -436,16 +473,19 @@ def main():
     if rodar_publicar:
         resultados["publicacao"] = _publicar_pendentes()
 
+    # Resumo
     _banner("RESUMO DA EXECUÇÃO")
     if resultados["artigo"] is not None:
-        _log(f"Artigo: {'✅ OK' if resultados['artigo'] else '❌ FALHA'}")
+        status = "✅ OK" if resultados["artigo"] else "❌ FALHA"
+        _log(f"Artigo: {status}")
     if resultados["noticia"] is not None:
-        _log(f"Notícia: {'✅ OK' if resultados['noticia'] else '❌ FALHA'}")
+        status = "✅ OK" if resultados["noticia"] else "❌ FALHA"
+        _log(f"Notícia: {status}")
     if resultados["publicacao"] is not None:
-        _log(f"Publicação: {'✅ OK' if resultados['publicacao'] else '❌ FALHA'}")
+        status = "✅ OK" if resultados["publicacao"] else "❌ FALHA"
+        _log(f"Publicação: {status}")
 
-    teve_falha = any(v is False for v in resultados.values() if v is not None)
-    return 1 if teve_falha else 0
+    return 0
 
 
 if __name__ == "__main__":

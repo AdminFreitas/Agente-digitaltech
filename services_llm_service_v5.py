@@ -1,25 +1,20 @@
 """
-llm_service.py — Fallback Chain de modelos de linguagem (v7 FINAL — corrigido)
+llm_service.py — Fallback Chain de modelos de linguagem (CORRIGIDO v5)
 
-Provedores disponíveis (todos podem ser ativados via FALLBACK_ORDER no .env):
-  Ollama, Groq, Gemini, HuggingFace, OpenAI, Claude, DeepSeek, Grok
+Baseado em testes reais em Aspire E1-571 + qwen2.5:3b (CPU).
 
-Fallback padrão (apenas gratuitos/funcionais):
-  ollama → groq → gemini → huggingface
-
-Para ativar provedores pagos, adicione-os ao FALLBACK_ORDER:
-  FALLBACK_ORDER=ollama,groq,gemini,huggingface,openai,claude,deepseek,grok
+Ajustes desta versão:
+- Ollama: timeout 400s (era 180s, insuficiente para artigo em CPU)
+- Claude: mantido claude-haiku-4-5-20251001 (modelo válido, erro era 401/chave)
+- Gemini: migração para SDK google-genai (google-generativeai está deprecado)
+  Modelo: gemini-3.6-flash (modelos 1.x, 2.x e 2.5 descontinuados)
+- OpenAI: sem mudança (erro 429 = quota, não código)
+- NOVO: DeepSeek, HuggingFace, Grok adicionados ao fallback
+- NOVO: ordem configurável via DEFAULT_LLM e FALLBACK_ORDER no .env
 
 Configuração no .env:
-    FALLBACK_ORDER=ollama,groq,gemini,huggingface
-    OLLAMA_URL=http://localhost:11434
-    OLLAMA_MODEL=qwen2.5:3b
-    GROQ_API_KEY=gsk_...
-    GROQ_MODEL=llama-3.3-70b-versatile
-    GEMINI_API_KEY=...
-    GEMINI_MODEL=gemini-3.6-flash
-    HUGGINGFACE_API_KEY=hf_...
-    HUGGINGFACE_MODEL=Qwen/Qwen3-8B
+    DEFAULT_LLM=ollama                    # primeiro a tentar
+    FALLBACK_ORDER=ollama,gemini,deepseek,huggingface,openai,claude,grok
 """
 
 import os
@@ -31,34 +26,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Chaves ─────────────────────────────────────────────────────────────────
 OPENAI_KEY    = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
 GEMINI_KEY    = os.getenv("GEMINI_API_KEY")
 DEEPSEEK_KEY  = os.getenv("DEEPSEEK_API_KEY")
-GROQ_KEY      = os.getenv("GROQ_API_KEY")
-HF_KEY        = os.getenv("HUGGINGFACE_API_KEY")
 GROK_KEY      = os.getenv("GROK_API_KEY")
-
-# ── Configurações Ollama ───────────────────────────────────────────────────
+HF_KEY        = os.getenv("HUGGINGFACE_API_KEY")
 OLLAMA_URL    = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL  = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
-# ── Modelos por provedor (todos configuráveis via .env) ────────────────────
-GROQ_MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GROK_MODEL        = os.getenv("GROK_MODEL", "grok-4.1-fast")
-GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-HUGGINGFACE_MODEL = os.getenv("HUGGINGFACE_MODEL", "Qwen/Qwen3-8B")
-OPENAI_MODEL      = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-ANTHROPIC_MODEL   = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
-DEEPSEEK_MODEL    = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-
-# ── Ordem de fallback (única fonte de verdade) ─────────────────────────────
-# DeepSeek fica de fora por padrão: a API dele exige saldo pago (não é free tier).
-FALLBACK_ORDER = os.getenv(
-    "FALLBACK_ORDER",
-    "ollama,groq,gemini,huggingface"
-)
+# Ordem configurável via .env
+DEFAULT_LLM = os.getenv("DEFAULT_LLM", "ollama").lower()
+FALLBACK_ORDER = os.getenv("FALLBACK_ORDER", "ollama,gemini,openai,claude,deepseek,huggingface,grok")
 FALLBACK_LIST = [p.strip().lower() for p in FALLBACK_ORDER.split(",") if p.strip()]
 
 
@@ -157,17 +136,18 @@ def _parsear_resposta(texto: str) -> dict:
     return {"titulo": titulo, "excerpt": resumo, "readTime": tempo_leitura, "corpo": corpo}
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Provedores individuais
-# ────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 
 def _tentar_openai(prompt: str) -> str:
     if not OPENAI_KEY:
         raise RuntimeError("OPENAI_API_KEY não configurada")
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_KEY)
+    model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     resp = client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         timeout=60,
     )
@@ -179,8 +159,9 @@ def _tentar_claude(prompt: str) -> str:
         raise RuntimeError("ANTHROPIC_API_KEY não configurada")
     import anthropic
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+    model = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
     resp = client.messages.create(
-        model=ANTHROPIC_MODEL,
+        model=model,
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -192,8 +173,9 @@ def _tentar_gemini(prompt: str) -> str:
         raise RuntimeError("GEMINI_API_KEY não configurada")
     from google import genai
     client = genai.Client(api_key=GEMINI_KEY)
+    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
     resp = client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=model,
         contents=prompt,
     )
     if not resp.text:
@@ -205,99 +187,55 @@ def _tentar_deepseek(prompt: str) -> str:
     if not DEEPSEEK_KEY:
         raise RuntimeError("DEEPSEEK_API_KEY não configurada")
     import httpx
-    try:
-        resp = httpx.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
-            json={
-                "model": DEEPSEEK_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 2000,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+    model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    resp = httpx.post(
+        "https://api.deepseek.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 2000,
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
 
 
 def _tentar_huggingface(prompt: str) -> str:
     if not HF_KEY:
         raise RuntimeError("HUGGINGFACE_API_KEY não configurada")
     import httpx
-    try:
-        resp = httpx.post(
-            # Endpoint novo (2026): gateway unificado "Inference Providers",
-            # compatível com o formato OpenAI. O antigo api-inference.huggingface.co
-            # ainda existe pra alguns casos, mas o router é o recomendado atualmente.
-            "https://router.huggingface.co/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {HF_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": HUGGINGFACE_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 2000,
-                "temperature": 0.7,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
-
-
-def _tentar_groq(prompt: str) -> str:
-    if not GROQ_KEY:
-        raise RuntimeError("GROQ_API_KEY não configurada")
-    import httpx
-    try:
-        resp = httpx.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {GROQ_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": GROQ_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": 2000,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+    model = os.getenv("HUGGINGFACE_MODEL", "Qwen/Qwen3-8B")
+    resp = httpx.post(
+        f"https://api-inference.huggingface.co/models/{model}",
+        headers={"Authorization": f"Bearer {HF_KEY}"},
+        json={"inputs": prompt, "parameters": {"max_new_tokens": 2000, "temperature": 0.7}},
+        timeout=120,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, list) and len(data) > 0:
+        return data[0].get("generated_text", "")
+    return str(data)
 
 
 def _tentar_grok(prompt: str) -> str:
     if not GROK_KEY:
         raise RuntimeError("GROK_API_KEY não configurada")
     import httpx
-    try:
-        resp = httpx.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {GROK_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": GROK_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": 2000,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+    resp = httpx.post(
+        "https://api.x.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {GROK_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": "grok-2",
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 2000,
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
 
 
 def _tentar_ollama(prompt: str) -> str:
@@ -328,9 +266,9 @@ def _tentar_ollama(prompt: str) -> str:
     return resposta
 
 
-# ────────────────────────────────────────────────────────────────────────────
-# Mapeamento de provedores (todos registrados, ativação via FALLBACK_ORDER)
-# ────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Mapeamento de provedores
+# ---------------------------------------------------------------------------
 _PROVEDORES_DISPONIVEIS = {
     "ollama":       ("Ollama local", _tentar_ollama),
     "openai":       ("OpenAI GPT", _tentar_openai),
@@ -338,19 +276,17 @@ _PROVEDORES_DISPONIVEIS = {
     "gemini":       ("Gemini Flash", _tentar_gemini),
     "deepseek":     ("DeepSeek", _tentar_deepseek),
     "huggingface":  ("HuggingFace", _tentar_huggingface),
-    "groq":         ("Groq", _tentar_groq),
     "grok":         ("Grok", _tentar_grok),
 }
 
 MODELO_POR_PROVEDOR = {
     "Ollama local":    OLLAMA_MODEL,
-    "OpenAI GPT":      OPENAI_MODEL,
-    "Claude Haiku":    ANTHROPIC_MODEL,
-    "Gemini Flash":    GEMINI_MODEL,
-    "DeepSeek":        DEEPSEEK_MODEL,
-    "HuggingFace":     HUGGINGFACE_MODEL,
-    "Groq":            GROQ_MODEL,
-    "Grok":            GROK_MODEL,
+    "OpenAI GPT":      os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+    "Claude Haiku":    os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
+    "Gemini Flash":    os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+    "DeepSeek":        os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+    "HuggingFace":     os.getenv("HUGGINGFACE_MODEL", "Qwen/Qwen3-8B"),
+    "Grok":            "grok-2",
 }
 
 
@@ -360,6 +296,7 @@ def _construir_fallback_chain() -> list:
     for nome in FALLBACK_LIST:
         if nome in _PROVEDORES_DISPONIVEIS:
             chain.append(_PROVEDORES_DISPONIVEIS[nome])
+    # Se a cadeia ficar vazia, usa Ollama como padrão
     if not chain:
         chain.append(_PROVEDORES_DISPONIVEIS["ollama"])
     return chain
@@ -400,7 +337,9 @@ def gerar_artigo(tema: str, categoria: str = "Tecnologia", tentativas_por_proved
     raise RuntimeError("Todos os provedores falharam:\n" + "\n".join(erros))
 
 
-# ── Primitivos reutilizáveis ───────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Primitivos reutilizáveis
+# ---------------------------------------------------------------------------
 parsear_resposta_padrao = _parsear_resposta
 gerar_slug = _gerar_slug
 

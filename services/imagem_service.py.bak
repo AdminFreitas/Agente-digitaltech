@@ -1,28 +1,21 @@
 """
 imagem_service.py — Busca (e, em último caso, geração) de imagem de capa gratuita
 
-ESTRATÉGIA DE BUSCA POR CONSULTA (query), da mais específica para a mais genérica:
+Estratégia de busca por CONSULTA (query), da mais específica para a mais genérica:
+
     1. Palavras-chave extraídas do TÍTULO do artigo
     2. TEMA (se informado)
     3. CATEGORIA (mapeada para uma query em inglês)
     4. "technology" (fallback final de query)
 
-ORDEM DE PRIORIDADE DAS FONTES:
+Para CADA uma dessas queries, tenta as fontes nesta ordem:
 
-  PARA ARTIGOS:
-    1. Openverse (licença aberta, gratuito, sem chave)
-    2. Unsplash (requer chave)
-    3. Pexels (requer chave)
-    4. Pixabay (requer chave)
-    5. Pollinations AI (geração — último recurso)
+    1. Unsplash
+    2. Pexels
+    3. Pixabay
+    4. Openverse
 
-  PARA NOTÍCIAS:
-    1. Imagem do feed RSS (foto real da notícia original)
-    2. Openverse
-    3. Unsplash → Pexels → Pixabay
-    4. Pollinations AI (último recurso)
-
-Assim que uma fonte retornar um resultado, a busca para e o resultado é
+Assim que uma fonte retorna um resultado, a busca para e o resultado é
 devolvido — não é feita nenhuma chamada desnecessária às fontes seguintes.
 
 Se NENHUMA combinação de (query x fonte) encontrar uma foto, o serviço cai
@@ -35,8 +28,8 @@ publicado sem imagem.
 Retorno padronizado (dict) em caso de sucesso:
     {
         "imagem_url":    str,
-        "imagem_fonte":  str,   # "RSS" | "Openverse" | "Unsplash" | "Pexels" | "Pixabay" | "Pollinations AI (gerada)"
-        "imagem_query":  str,    # a query que efetivamente encontrou/gerou a imagem
+        "imagem_fonte":  str,   # "Unsplash" | "Pexels" | "Pixabay" | "Openverse" | "Pollinations AI (gerada)"
+        "imagem_query":  str,   # a query que efetivamente encontrou/gerou a imagem
         "imagem_alt":    str,
         "imagem_autor":  str,
         "imagem_link":   str,
@@ -55,10 +48,10 @@ import httpx
 # Chaves de API
 # ---------------------------------------------------------------------------
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
-PEXELS_API_KEY      = os.getenv("PEXELS_API_KEY")
-PIXABAY_API_KEY     = os.getenv("PIXABAY_API_KEY")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 # Openverse e Pollinations não exigem chave para uso básico.
-OPENVERSE_CLIENT_ID = os.getenv("OPENVERSE_CLIENT_ID")  # opcional, aumenta limite
+OPENVERSE_CLIENT_ID = os.getenv("OPENVERSE_CLIENT_ID")  # opcional, aumenta limite de requisições
 
 TIMEOUT = 15
 
@@ -93,7 +86,7 @@ STOPWORDS_PT = {
     "sobre", "e", "ou", "que", "se", "é", "são", "foi", "ser", "sua", "seu",
     "suas", "seus", "ao", "aos", "à", "às", "como", "mais", "menos", "muito",
     "porque", "por que", "quando", "onde", "qual", "quais", "isso", "isto",
-    "este", "esta", "esse", "essa", "num", "numa", "nenhum", "nenhuma",
+    "este", "esta", "esse", "essa", "num", "numa",
 }
 
 
@@ -105,14 +98,18 @@ def _extrair_palavras_chave(titulo: str, max_palavras: int = 5) -> str:
     if not titulo:
         return ""
 
+    # Captura tokens alfanuméricos, incluindo variações como "HTTP/3" ou
+    # "Node.js" (letra/número seguido opcionalmente de /x ou .x).
     tokens = re.findall(
-        r"[A-Za-zçÇãÃõÕáéíóúÁÉÍÓÚâêîôûÂÊÎÔÛ0-9]+(?:[/\.][A-Za-zçÇãÃõÕáéíóúÁÉÍÓÚâêîôûÂÊÎÔÛ0-9]+)*", titulo
+        r"[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:[/.][A-Za-zÀ-ÖØ-öø-ÿ0-9]+)*", titulo
     )
 
     significativas = []
     for tok in tokens:
         tok_lower = tok.lower()
 
+        # números de versão isolados nunca são descartados por tamanho —
+        # só por serem stopword, o que nunca ocorre para números.
         if tok.isdigit():
             significativas.append(tok)
             continue
@@ -120,6 +117,8 @@ def _extrair_palavras_chave(titulo: str, max_palavras: int = 5) -> str:
         if tok_lower in STOPWORDS_PT:
             continue
 
+        # mantém termos curtos que contenham "/" ou "." (ex.: "HTTP/3");
+        # descarta palavras curtas comuns (ex.: "de", "ao") com < 3 letras.
         if len(tok) <= 2 and "/" not in tok and "." not in tok:
             continue
 
@@ -134,44 +133,6 @@ def _extrair_palavras_chave(titulo: str, max_palavras: int = 5) -> str:
 # ---------------------------------------------------------------------------
 # Fontes de BUSCA (retornam None se não encontrarem nada ou em caso de erro)
 # ---------------------------------------------------------------------------
-def _buscar_no_openverse(query: str) -> dict | None:
-    """Openverse (openverse.org) agrega imagens com licença aberta (Creative
-    Commons) de várias fontes. Não exige chave para uso básico, mas respeita
-    um client_id opcional para aumentar o limite de requisições."""
-    print(f'[Imagem] Buscando "{query}" no Openverse')
-    try:
-        headers = {}
-        if OPENVERSE_CLIENT_ID:
-            headers["Authorization"] = f"Bearer {OPENVERSE_CLIENT_ID}"
-
-        resp = httpx.get(
-            "https://api.openverse.org/v1/images/search",
-            params={
-                "q": query,
-                "license_type": "commercial",
-                "page_size": 10,
-            },
-            headers=headers,
-            timeout=TIMEOUT,
-        )
-        resp.raise_for_status()
-        resultados = resp.json().get("results", [])
-        if not resultados:
-            return None
-        foto = random.choice(resultados)
-        return {
-            "url": foto.get("url"),
-            "autor": foto.get("creator") or "Desconhecido",
-            "link": foto.get("foreign_landing_url") or foto.get("url"),
-            "fonte": "Openverse",
-            "query": query,
-            "alt": foto.get("title") or query,
-        }
-    except Exception as e:
-        print(f"[Imagem] Openverse falhou para '{query}': {e}")
-        return None
-
-
 def _buscar_no_unsplash(query: str) -> dict | None:
     if not UNSPLASH_ACCESS_KEY:
         return None
@@ -189,6 +150,8 @@ def _buscar_no_unsplash(query: str) -> dict | None:
             return None
         foto = random.choice(resultados)
         return {
+            # "small"/"small_s3" carregam bem mais rápido que "regular" e
+            # têm resolução suficiente para uma capa de blog.
             "url": foto["urls"]["small"],
             "autor": foto["user"]["name"],
             "link": foto["user"]["links"]["html"],
@@ -253,6 +216,8 @@ def _buscar_no_pixabay(query: str) -> dict | None:
             return None
         foto = random.choice(fotos)
         return {
+            # "webformatURL" é bem mais leve que "largeImageURL" e mantém
+            # qualidade suficiente para capa de blog.
             "url": foto["webformatURL"],
             "autor": foto["user"],
             "link": foto["pageURL"],
@@ -265,67 +230,43 @@ def _buscar_no_pixabay(query: str) -> dict | None:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Extração de imagem do RSS (para NOTÍCIAS — prioridade máxima)
-# ---------------------------------------------------------------------------
-def _extrair_imagem_do_rss(url_fonte: str) -> dict | None:
-    """
-    Tenta extrair a imagem principal (og:image) da página da notícia original.
-    Usado como PRIORIDADE 1 para notícias — foto real do evento/notícia.
-    """
-    if not url_fonte:
-        return None
-    print(f"[Imagem] Tentando extrair imagem da fonte: {url_fonte}")
+def _buscar_no_openverse(query: str) -> dict | None:
+    """Openverse (openverse.org) agrega imagens com licença aberta (Creative
+    Commons) de várias fontes. Não exige chave para uso básico, mas respeita
+    um client_id opcional para aumentar o limite de requisições."""
+    print(f'[Imagem] Buscando "{query}" no Openverse')
     try:
-        resp = httpx.get(url_fonte, timeout=10, follow_redirects=True)
+        headers = {}
+        if OPENVERSE_CLIENT_ID:
+            headers["Authorization"] = f"Bearer {OPENVERSE_CLIENT_ID}"
+
+        resp = httpx.get(
+            "https://api.openverse.org/v1/images/search",
+            params={
+                "q": query,
+                # apenas "commercial" (sem exigir "modification") amplia
+                # bastante a quantidade de resultados retornados.
+                "license_type": "commercial",
+                "page_size": 10,
+            },
+            headers=headers,
+            timeout=TIMEOUT,
+        )
         resp.raise_for_status()
-        html = resp.text
-
-        # Tenta og:image
-        og_match = re.search(r'<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']', html, re.IGNORECASE)
-        if og_match:
-            img_url = og_match.group(1)
-            return {
-                "url": img_url,
-                "autor": "Fonte original",
-                "link": url_fonte,
-                "fonte": "RSS (og:image)",
-                "query": url_fonte,
-                "alt": "Imagem da notícia original",
-            }
-
-        # Tenta twitter:image
-        tw_match = re.search(r'<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']', html, re.IGNORECASE)
-        if tw_match:
-            img_url = tw_match.group(1)
-            return {
-                "url": img_url,
-                "autor": "Fonte original",
-                "link": url_fonte,
-                "fonte": "RSS (twitter:image)",
-                "query": url_fonte,
-                "alt": "Imagem da notícia original",
-            }
-
-        # Tenta primeira imagem grande no corpo do artigo
-        img_match = re.search(r'<img[^>]+src=["'](https?://[^"']+)["'][^>]*>', html, re.IGNORECASE)
-        if img_match:
-            img_url = img_match.group(1)
-            # Evita ícones e imagens pequenas
-            if any(x in img_url.lower() for x in ["icon", "logo", "avatar", "button"]):
-                return None
-            return {
-                "url": img_url,
-                "autor": "Fonte original",
-                "link": url_fonte,
-                "fonte": "RSS (imagem no corpo)",
-                "query": url_fonte,
-                "alt": "Imagem da notícia original",
-            }
-
-        return None
+        resultados = resp.json().get("results", [])
+        if not resultados:
+            return None
+        foto = random.choice(resultados)
+        return {
+            "url": foto.get("url"),
+            "autor": foto.get("creator") or "Desconhecido",
+            "link": foto.get("foreign_landing_url") or foto.get("url"),
+            "fonte": "Openverse",
+            "query": query,
+            "alt": foto.get("title") or query,
+        }
     except Exception as e:
-        print(f"[Imagem] Falha ao extrair imagem de {url_fonte}: {e}")
+        print(f"[Imagem] Openverse falhou para '{query}': {e}")
         return None
 
 
@@ -367,7 +308,7 @@ def _gerar_no_pollinations(query: str) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# Padronização
+# Orquestração
 # ---------------------------------------------------------------------------
 def _padronizar(resultado: dict) -> dict:
     return {
@@ -395,7 +336,7 @@ def _montar_queries(titulo: str, tema: str | None, categoria: str | None) -> lis
 
     candidatos.append("technology")
 
-    # remove duplicatas mantendo a ordem de prioridade
+    # remove duplicadas mantendo a ordem de prioridade
     vistos = set()
     queries = []
     for q in candidatos:
@@ -407,25 +348,26 @@ def _montar_queries(titulo: str, tema: str | None, categoria: str | None) -> lis
     return queries
 
 
-# ---------------------------------------------------------------------------
-# Função pública — ARTIGOS (sem URL de fonte)
-# ---------------------------------------------------------------------------
 def buscar_imagem_capa(
     titulo: str = "",
     tema: str | None = None,
     categoria: str | None = None,
 ) -> dict | None:
     """
-    Busca uma imagem de capa para ARTIGOS evergreen.
-    Ordem: Openverse → Unsplash → Pexels → Pixabay → Pollinations AI.
+    Busca (ou, em último caso, gera) uma imagem de capa para o artigo.
+
+    Ordem de prioridade das QUERIES: título -> tema -> categoria -> "technology"
+    Ordem de prioridade das FONTES, para cada query: Unsplash -> Pexels ->
+    Pixabay -> Openverse.
+
+    Se nenhuma combinação encontrar nada, gera uma imagem via Pollinations AI
+    usando a query mais específica disponível.
+
+    Retorna um dict padronizado (imagem_url, imagem_fonte, imagem_query,
+    imagem_alt, imagem_autor, imagem_link) ou None em caso de falha total.
     """
     queries = _montar_queries(titulo, tema, categoria)
-    buscadores = (
-        _buscar_no_openverse,
-        _buscar_no_unsplash,
-        _buscar_no_pexels,
-        _buscar_no_pixabay,
-    )
+    buscadores = (_buscar_no_unsplash, _buscar_no_pexels, _buscar_no_pixabay, _buscar_no_openverse)
 
     for query in queries:
         for buscador in buscadores:
@@ -446,27 +388,3 @@ def buscar_imagem_capa(
 
     print("[Imagem] Falha completa: nem busca nem geração funcionaram.")
     return None
-
-
-# ---------------------------------------------------------------------------
-# Função pública — NOTÍCIAS (com URL da fonte RSS)
-# ---------------------------------------------------------------------------
-def buscar_imagem_noticia(
-    titulo: str = "",
-    tema: str | None = None,
-    categoria: str | None = None,
-    url_fonte: str | None = None,
-) -> dict | None:
-    """
-    Busca uma imagem de capa para NOTÍCIAS.
-    Ordem: RSS (og:image) → Openverse → Unsplash → Pexels → Pixabay → Pollinations AI.
-    """
-    # PRIORIDADE 1: extrair imagem da fonte original (foto real da notícia)
-    if url_fonte:
-        resultado = _extrair_imagem_do_rss(url_fonte)
-        if resultado:
-            print(f'[Imagem] Sucesso: fonte="{resultado["fonte"]}" url={url_fonte}')
-            return _padronizar(resultado)
-
-    # PRIORIDADE 2+: mesma ordem dos artigos, começando pelo Openverse
-    return buscar_imagem_capa(titulo=titulo, tema=tema, categoria=categoria)
