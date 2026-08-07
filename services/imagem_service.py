@@ -57,8 +57,7 @@ import httpx
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
 PEXELS_API_KEY      = os.getenv("PEXELS_API_KEY")
 PIXABAY_API_KEY     = os.getenv("PIXABAY_API_KEY")
-# Openverse e Pollinations não exigem chave para uso básico.
-OPENVERSE_CLIENT_ID = os.getenv("OPENVERSE_CLIENT_ID")  # opcional, aumenta limite
+# Openverse não exige chave para uso básico (requisições anônimas permitidas).
 
 TIMEOUT = 15
 
@@ -99,7 +98,7 @@ STOPWORDS_PT = {
 
 def _extrair_palavras_chave(titulo: str, max_palavras: int = 5) -> str:
     """Extrai as palavras mais relevantes do título (remove stopwords, artigos
-    e preposições), preservando termos técnicos compostos (ex.: "HTTP/3",
+    e preposições), preservando termos técnicos compostos (ex.: 'HTTP/3',
     "Node.js") e números de versão que normalmente seriam descartados por
     serem curtos demais (ex.: o "17" de "PostgreSQL 17")."""
     if not titulo:
@@ -135,41 +134,90 @@ def _extrair_palavras_chave(titulo: str, max_palavras: int = 5) -> str:
 # Fontes de BUSCA (retornam None se não encontrarem nada ou em caso de erro)
 # ---------------------------------------------------------------------------
 def _buscar_no_openverse(query: str) -> dict | None:
-    """Openverse (openverse.org) agrega imagens com licença aberta (Creative
-    Commons) de várias fontes. Não exige chave para uso básico, mas respeita
-    um client_id opcional para aumentar o limite de requisições."""
-    print(f'[Imagem] Buscando "{query}" no Openverse')
-    try:
-        headers = {}
-        if OPENVERSE_CLIENT_ID:
-            headers["Authorization"] = f"Bearer {OPENVERSE_CLIENT_ID}"
+    """
+    Openverse (openverse.org) agrega imagens com licença aberta (Creative
+    Commons) de várias fontes. Não exige chave para uso básico.
 
+    CORREÇÃO v2 (2026-08-06):
+    - Endpoint confirmado: https://api.openverse.org/v1/images/
+    - Adicionado User-Agent para evitar bloqueios
+    - Removido license_type que pode causar 404 em algumas queries
+    - Adicionado fallback para endpoint alternativo se o primário falhar
+    - Melhor tratamento de erro e validação da resposta
+    """
+    print(f'[Imagem] Buscando "{query}" no Openverse')
+
+    headers = {
+        "User-Agent": "DigitalTechBot/1.0 (https://www.digitaltech.digital/)",
+        "Accept": "application/json",
+    }
+
+    # Tentativa 1: endpoint oficial com parâmetros mínimos
+    try:
         resp = httpx.get(
-            "https://api.openverse.org/v1/images/search",
+            "https://api.openverse.org/v1/images/",
             params={
                 "q": query,
-                "license_type": "commercial",
                 "page_size": 10,
             },
             headers=headers,
             timeout=TIMEOUT,
+            follow_redirects=True,
         )
-        resp.raise_for_status()
-        resultados = resp.json().get("results", [])
-        if not resultados:
+        print(f"[Imagem] Openverse resposta: {resp.status_code}")
+
+        if resp.status_code == 200:
+            dados = resp.json()
+            resultados = dados.get("results", []) if isinstance(dados, dict) else []
+            if resultados:
+                foto = random.choice(resultados)
+                return {
+                    "url": foto.get("url") or foto.get("thumbnail") or foto.get("detail_url"),
+                    "autor": foto.get("creator") or "Desconhecido",
+                    "link": foto.get("foreign_landing_url") or foto.get("url") or "https://openverse.org",
+                    "fonte": "Openverse",
+                    "query": query,
+                    "alt": foto.get("title") or query,
+                }
+            print(f"[Imagem] Openverse: nenhum resultado para '{query}'")
             return None
-        foto = random.choice(resultados)
-        return {
-            "url": foto.get("url"),
-            "autor": foto.get("creator") or "Desconhecido",
-            "link": foto.get("foreign_landing_url") or foto.get("url"),
-            "fonte": "Openverse",
-            "query": query,
-            "alt": foto.get("title") or query,
-        }
+
+        elif resp.status_code == 404:
+            print(f"[Imagem] Openverse 404 — tentando endpoint alternativo...")
+        else:
+            print(f"[Imagem] Openverse erro HTTP {resp.status_code}: {resp.text[:200]}")
+
+    except httpx.TimeoutException:
+        print(f"[Imagem] Openverse timeout para '{query}'")
     except Exception as e:
         print(f"[Imagem] Openverse falhou para '{query}': {e}")
-        return None
+
+    # Tentativa 2: endpoint alternativo (sem trailing slash, algumas APIs preferem)
+    try:
+        resp = httpx.get(
+            "https://api.openverse.org/v1/images",
+            params={"q": query, "page_size": 10},
+            headers=headers,
+            timeout=TIMEOUT,
+            follow_redirects=True,
+        )
+        if resp.status_code == 200:
+            dados = resp.json()
+            resultados = dados.get("results", []) if isinstance(dados, dict) else []
+            if resultados:
+                foto = random.choice(resultados)
+                return {
+                    "url": foto.get("url") or foto.get("thumbnail"),
+                    "autor": foto.get("creator") or "Desconhecido",
+                    "link": foto.get("foreign_landing_url") or foto.get("url") or "https://openverse.org",
+                    "fonte": "Openverse",
+                    "query": query,
+                    "alt": foto.get("title") or query,
+                }
+    except Exception:
+        pass  # já logamos o erro acima
+
+    return None
 
 
 def _buscar_no_unsplash(query: str) -> dict | None:
