@@ -1,18 +1,10 @@
-name: Gerar Conteúdo DigitalTech
+name: Gerar Notícias DigitalTech
 
 on:
   schedule:
-    - cron: "0 9,21 * * *"  # 06h e 18h BRT (UTC-3)
+    - cron: "0 7,11,15,19 * * *"   # 04h, 08h, 12h e 16h BRT (UTC-3)
   workflow_dispatch:
     inputs:
-      tipo:
-        description: "Tipo de conteúdo"
-        type: choice
-        options:
-          - ambos
-          - artigo
-          - noticia
-        default: ambos
       sem_publicar:
         description: "Gerar como rascunho, sem publicar"
         type: boolean
@@ -55,13 +47,11 @@ jobs:
           GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
           GITHUB_REPOSITORY: ${{ secrets.GITHUB_REPOSITORY }}
 
-      - name: Executar pipeline
+      - name: Executar pipeline de notícias
         run: |
-          TIPO="${{ github.event.inputs.tipo || 'ambos' }}"
           SEM_PUBLICAR="${{ github.event.inputs.sem_publicar }}"
           PUBLICAR_PENDENTES="${{ github.event.inputs.publicar_pendentes }}"
-
-          ARGS="--tipo $TIPO"
+          ARGS="--tipo noticia"
 
           if [ "$SEM_PUBLICAR" = "true" ]; then
             ARGS="$ARGS --sem-publicar"
@@ -70,7 +60,6 @@ jobs:
           echo "Executando: python workflow.py $ARGS"
           python workflow.py $ARGS
 
-          # Publica pendentes se solicitado
           if [ "$PUBLICAR_PENDENTES" = "true" ] && [ "$SEM_PUBLICAR" != "true" ]; then
             echo "Publicando rascunhos pendentes..."
             python rodar_agente.py --publicar || true
