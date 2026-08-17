@@ -1,25 +1,44 @@
 """
-llm_service.py — Fallback Chain de modelos de linguagem (v7 FINAL — corrigido)
+llm_service.py — Fallback Chain de modelos de linguagem (v8 — todos os provedores do .env)
 
 Provedores disponíveis (todos podem ser ativados via FALLBACK_ORDER no .env):
-  Ollama, Groq, Gemini, HuggingFace, OpenAI, Claude, DeepSeek, Grok
+  Ollama, Gemini, Groq, OpenAI, Claude, DeepSeek, Grok,
+  Perplexity, HuggingFace, Mistral, Cohere, Together, Kimi/Moonshot, OpenRouter
 
-Fallback padrão (apenas gratuitos/funcionais):
-  ollama → groq → gemini → huggingface
-
-Para ativar provedores pagos, adicione-os ao FALLBACK_ORDER:
-  FALLBACK_ORDER=ollama,groq,gemini,huggingface,openai,claude,deepseek,grok
+Fallback padrão (ordem solicitada: ollama → gemini → groq → ...):
+  ollama → gemini → groq → openai → claude → deepseek → grok → perplexity
+  → huggingface → mistral → cohere → together → kimi → openrouter
 
 Configuração no .env:
-    FALLBACK_ORDER=ollama,groq,gemini,huggingface
+    FALLBACK_ORDER=ollama,gemini,groq,openai,claude,deepseek,grok,perplexity,huggingface,mistral,cohere,together,kimi,openrouter
     OLLAMA_URL=http://localhost:11434
     OLLAMA_MODEL=qwen2.5:3b
-    GROQ_API_KEY=gsk_...
-    GROQ_MODEL=llama-3.3-70b-versatile
     GEMINI_API_KEY=...
     GEMINI_MODEL=gemini-3.6-flash
+    GROQ_API_KEY=gsk_...
+    GROQ_MODEL=llama-3.3-70b-versatile
+    OPENAI_API_KEY=sk-...
+    OPENAI_MODEL=gpt-4o-mini
+    ANTHROPIC_API_KEY=sk-ant-...
+    ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+    DEEPSEEK_API_KEY=...
+    DEEPSEEK_MODEL=deepseek-chat
+    GROK_API_KEY=...
+    GROK_MODEL=grok-4.1-fast
+    PERPLEXITY_API_KEY=...
+    PERPLEXITY_MODEL=sonar
     HUGGINGFACE_API_KEY=hf_...
     HUGGINGFACE_MODEL=Qwen/Qwen3-8B
+    MISTRAL_API_KEY=...
+    MISTRAL_MODEL=mistral-small-latest
+    COHERE_API_KEY=...
+    COHERE_MODEL=command-r
+    TOGETHER_API_KEY=...
+    TOGETHER_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
+    KIMI_API_KEY=...
+    KIMI_MODEL=moonshot-v1-8k
+    OPENROUTER_API_KEY=...
+    OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct
 """
 
 import os
@@ -32,32 +51,43 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Chaves ─────────────────────────────────────────────────────────────────
-OPENAI_KEY    = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
-GEMINI_KEY    = os.getenv("GEMINI_API_KEY")
-DEEPSEEK_KEY  = os.getenv("DEEPSEEK_API_KEY")
-GROQ_KEY      = os.getenv("GROQ_API_KEY")
-HF_KEY        = os.getenv("HUGGINGFACE_API_KEY")
-GROK_KEY      = os.getenv("GROK_API_KEY")
+OPENAI_KEY      = os.getenv("OPENAI_API_KEY")
+ANTHROPIC_KEY   = os.getenv("ANTHROPIC_API_KEY")
+GEMINI_KEY      = os.getenv("GEMINI_API_KEY")
+DEEPSEEK_KEY    = os.getenv("DEEPSEEK_API_KEY")
+GROQ_KEY        = os.getenv("GROQ_API_KEY")
+HF_KEY          = os.getenv("HUGGINGFACE_API_KEY")
+GROK_KEY        = os.getenv("GROK_API_KEY")
+PERPLEXITY_KEY  = os.getenv("PERPLEXITY_API_KEY")
+MISTRAL_KEY     = os.getenv("MISTRAL_API_KEY")
+COHERE_KEY      = os.getenv("COHERE_API_KEY")
+TOGETHER_KEY    = os.getenv("TOGETHER_API_KEY")
+KIMI_KEY        = os.getenv("KIMI_API_KEY") or os.getenv("MOONSHOT_API_KEY")
+OPENROUTER_KEY  = os.getenv("OPENROUTER_API_KEY")
 
 # ── Configurações Ollama ───────────────────────────────────────────────────
 OLLAMA_URL    = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL  = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 # ── Modelos por provedor (todos configuráveis via .env) ────────────────────
-GROQ_MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-GROK_MODEL        = os.getenv("GROK_MODEL", "grok-4.1-fast")
-GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-HUGGINGFACE_MODEL = os.getenv("HUGGINGFACE_MODEL", "Qwen/Qwen3-8B")
-OPENAI_MODEL      = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-ANTHROPIC_MODEL   = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
-DEEPSEEK_MODEL    = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+GROQ_MODEL         = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROK_MODEL         = os.getenv("GROK_MODEL", "grok-4.1-fast")
+GEMINI_MODEL       = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+HUGGINGFACE_MODEL  = os.getenv("HUGGINGFACE_MODEL", "Qwen/Qwen3-8B")
+OPENAI_MODEL       = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+ANTHROPIC_MODEL    = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+DEEPSEEK_MODEL     = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+PERPLEXITY_MODEL   = os.getenv("PERPLEXITY_MODEL", "sonar")
+MISTRAL_MODEL      = os.getenv("MISTRAL_MODEL", "mistral-small-latest")
+COHERE_MODEL       = os.getenv("COHERE_MODEL", "command-r")
+TOGETHER_MODEL     = os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo")
+KIMI_MODEL         = os.getenv("KIMI_MODEL", "moonshot-v1-8k")
+OPENROUTER_MODEL   = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct")
 
 # ── Ordem de fallback (única fonte de verdade) ─────────────────────────────
-# DeepSeek fica de fora por padrão: a API dele exige saldo pago (não é free tier).
 FALLBACK_ORDER = os.getenv(
     "FALLBACK_ORDER",
-    "ollama,groq,gemini,huggingface"
+    "ollama,gemini,groq,openai,claude,deepseek,grok,perplexity,huggingface,mistral,cohere,together,kimi,openrouter"
 )
 FALLBACK_LIST = [p.strip().lower() for p in FALLBACK_ORDER.split(",") if p.strip()]
 
@@ -228,9 +258,6 @@ def _tentar_huggingface(prompt: str) -> str:
     import httpx
     try:
         resp = httpx.post(
-            # Endpoint novo (2026): gateway unificado "Inference Providers",
-            # compatível com o formato OpenAI. O antigo api-inference.huggingface.co
-            # ainda existe pra alguns casos, mas o router é o recomendado atualmente.
             "https://router.huggingface.co/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {HF_KEY}",
@@ -328,6 +355,160 @@ def _tentar_ollama(prompt: str) -> str:
     return resposta
 
 
+def _tentar_perplexity(prompt: str) -> str:
+    if not PERPLEXITY_KEY:
+        raise RuntimeError("PERPLEXITY_API_KEY não configurada")
+    import httpx
+    try:
+        resp = httpx.post(
+            "https://api.perplexity.ai/chat/completions",
+            headers={
+                "Authorization": f"Bearer {PERPLEXITY_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": PERPLEXITY_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
+def _tentar_mistral(prompt: str) -> str:
+    if not MISTRAL_KEY:
+        raise RuntimeError("MISTRAL_API_KEY não configurada")
+    import httpx
+    try:
+        resp = httpx.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {MISTRAL_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": MISTRAL_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
+def _tentar_cohere(prompt: str) -> str:
+    if not COHERE_KEY:
+        raise RuntimeError("COHERE_API_KEY não configurada")
+    import httpx
+    try:
+        resp = httpx.post(
+            "https://api.cohere.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {COHERE_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": COHERE_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
+def _tentar_together(prompt: str) -> str:
+    if not TOGETHER_KEY:
+        raise RuntimeError("TOGETHER_API_KEY não configurada")
+    import httpx
+    try:
+        resp = httpx.post(
+            "https://api.together.xyz/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {TOGETHER_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": TOGETHER_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
+def _tentar_kimi(prompt: str) -> str:
+    if not KIMI_KEY:
+        raise RuntimeError("KIMI_API_KEY / MOONSHOT_API_KEY não configurada")
+    import httpx
+    base_url = os.getenv("KIMI_BASE_URL") or os.getenv("MOONSHOT_BASE_URL") or "https://api.moonshot.cn/v1"
+    try:
+        resp = httpx.post(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {KIMI_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": KIMI_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
+def _tentar_openrouter(prompt: str) -> str:
+    if not OPENROUTER_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY não configurada")
+    import httpx
+    base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api")
+    try:
+        resp = httpx.post(
+            f"{base_url}/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", ""),
+                "X-Title": os.getenv("OPENROUTER_APP_NAME", "DigitalTech Agent"),
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7,
+                "max_tokens": 2000,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Mapeamento de provedores (todos registrados, ativação via FALLBACK_ORDER)
 # ────────────────────────────────────────────────────────────────────────────
@@ -340,17 +521,29 @@ _PROVEDORES_DISPONIVEIS = {
     "huggingface":  ("HuggingFace", _tentar_huggingface),
     "groq":         ("Groq", _tentar_groq),
     "grok":         ("Grok", _tentar_grok),
+    "perplexity":   ("Perplexity", _tentar_perplexity),
+    "mistral":      ("Mistral AI", _tentar_mistral),
+    "cohere":       ("Cohere", _tentar_cohere),
+    "together":     ("Together AI", _tentar_together),
+    "kimi":         ("Kimi / Moonshot", _tentar_kimi),
+    "openrouter":   ("OpenRouter", _tentar_openrouter),
 }
 
 MODELO_POR_PROVEDOR = {
-    "Ollama local":    OLLAMA_MODEL,
-    "OpenAI GPT":      OPENAI_MODEL,
-    "Claude Haiku":    ANTHROPIC_MODEL,
-    "Gemini Flash":    GEMINI_MODEL,
-    "DeepSeek":        DEEPSEEK_MODEL,
-    "HuggingFace":     HUGGINGFACE_MODEL,
-    "Groq":            GROQ_MODEL,
-    "Grok":            GROK_MODEL,
+    "Ollama local":      OLLAMA_MODEL,
+    "OpenAI GPT":        OPENAI_MODEL,
+    "Claude Haiku":      ANTHROPIC_MODEL,
+    "Gemini Flash":      GEMINI_MODEL,
+    "DeepSeek":          DEEPSEEK_MODEL,
+    "HuggingFace":       HUGGINGFACE_MODEL,
+    "Groq":              GROQ_MODEL,
+    "Grok":              GROK_MODEL,
+    "Perplexity":        PERPLEXITY_MODEL,
+    "Mistral AI":        MISTRAL_MODEL,
+    "Cohere":            COHERE_MODEL,
+    "Together AI":       TOGETHER_MODEL,
+    "Kimi / Moonshot":   KIMI_MODEL,
+    "OpenRouter":        OPENROUTER_MODEL,
 }
 
 

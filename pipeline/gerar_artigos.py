@@ -92,3 +92,29 @@ def gerar_e_processar_artigo(
         resultado["blog_url"] = resultado_publicacao["blog_url"]
 
     return resultado
+
+
+if __name__ == "__main__":
+    TEMA_TESTE = "Como a IA generativa está mudando o desenvolvimento de software em 2026"
+
+    try:
+        resultado = gerar_e_processar_artigo(
+            tema=TEMA_TESTE,
+            categoria="Tecnologia",
+            publicar_imediatamente=True,
+        )
+
+        print("\n=== Artigo gerado e publicado com sucesso ===")
+        print(f"ID:      {resultado.get('id')}")
+        print(f"Título:  {resultado.get('titulo')}")
+        print(f"Slug:    {resultado.get('slug')}")
+        print(f"Status:  {resultado.get('status')}")
+        print(f"GitHub:  {resultado.get('github_url')}")
+        print(f"Blog:    {resultado.get('blog_url')}")
+        print(f"Imagem:  {resultado.get('imagem')}")
+
+    except Exception:
+        import traceback
+
+        print("\n=== ERRO ao gerar/publicar artigo ===")
+        traceback.print_exc()

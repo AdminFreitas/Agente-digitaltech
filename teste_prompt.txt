@@ -1,0 +1,8 @@
+Responda SOMENTE com JSON válido, sem markdown, sem explicações e sem ```.
+
+Formato obrigatório:
+{
+  "titulo": "Teste",
+  "resumo": "Resumo de teste",
+  "corpo_markdown": "# Teste\n\nConteudo de teste."
+}
