@@ -1,0 +1,69 @@
+# Correção real do painel — notícias visíveis + IDs sem colisão
+
+## O que foi corrigido de verdade (verificável por diff)
+
+1. **`/api/conteudos` agora consulta `artigos` E `noticias`.**
+   Antes só existia `_painel_query()` batendo em `artigos`. Agora existe
+   também uma chamada a `NoticiaRepository(db).listar_todos()`, e os dois
+   resultados são combinados antes de aplicar filtro/busca/ordenação.
+
+2. **IDs compostos (`"artigo:5"` / `"noticia:5"`) implementados de ponta a
+   ponta**, não só declarados:
+   - Backend: `GET/PATCH/DELETE /api/conteudos/{id}` e
+     `/api/conteudos/{id}/publicar` mudaram de `id: int` para `id: str` e
+     usam `_parse_ref()` para decidir qual repositório chamar.
+   - Frontend: os `onclick` em `static/index.html` que montavam
+     `viewItem(${x.id})` (sem aspas) foram trocados para
+     `viewItem('${x.id}')`. **Isso era necessário** — sem essa aspa, um id
+     tipo `noticia:5` vira `onclick="viewItem(noticia:5)"`, que é erro de
+     sintaxe JavaScript, não uma chamada de função. A entrega anterior não
+     tinha mexido nisso.
+
+3. **`slugify()` agora existe.** Estava sendo chamado em
+   `painel_criar_conteudo` sem nunca ter sido definido ou importado — isso
+   quebraria com `NameError` assim que alguém criasse conteúdo sem informar
+   um slug manualmente. Adicionei uma implementação local em `app.py`.
+
+4. **`/api/dashboard`** agora conta `revisao`/`publicados` somando artigos +
+   notícias de verdade (antes só contava artigos e cravava `noticias: 0`).
+
+5. **Criar/editar/excluir/publicar notícia** agora passam pelo
+   `NoticiaRepository` real (`criar`, `atualizar`, `excluir`, `publicar`,
+   `buscar_por_id`, `buscar_por_slug`) usando os nomes de parâmetro exatos
+   que você colou (`categoria` como string, `conteudo` sem sufixo `_md`).
+
+6. Botão **"Publicar"** foi adicionado nas linhas da tabela do painel
+   (`static/index.html`). Antes, `window.publicarItem` existia em
+   `index_integration.js` mas **nenhum botão da interface o chamava** — era
+   código morto por outro motivo, não relacionado a artigos vs. notícias.
+
+## O que NÃO pude confirmar (preciso que você teste)
+
+`NoticiaRepository.atualizar(noticia_id, dados: dict)` só foi enviado como
+assinatura tipada (`dados: dict`), sem o corpo do método. Não sei com
+certeza quais chaves esse dicionário deveria ter internamente. Assumi que
+`atualizar()` espera as mesmas chaves que `criar()` usa
+(`titulo`, `slug`, `resumo`, `conteudo`, `categoria`, `status`,
+`imagem_url`, `meta_title`, `meta_description`) — é a suposição mais
+razoável dado que `criar()` já usa esses nomes, mas é uma suposição.
+
+**Teste manual antes de confiar em produção:**
+1. Suba a API e gere uma notícia (`POST /api/noticias/gerar` ou o botão
+   "Gerar com IA" > Notícia).
+2. Confirme que ela aparece em `/api/conteudos` com um id tipo `"noticia:N"`.
+3. Edite essa notícia pelo painel (mude o título, por exemplo) e confirme
+   no banco (`SELECT titulo FROM noticias WHERE id = N`) que a coluna
+   certa foi atualizada. Se `atualizar()` usar nomes de coluna diferentes
+   dos que passei, essa chamada pode falhar silenciosamente ou lançar
+   exceção — nesse caso me mande o corpo real do método que eu ajusto.
+4. Exclua uma notícia de teste e confirme que a imagem relacionada em
+   `imagens` também sumiu (o docstring do repositório diz que isso é
+   "cascade", mas vale confirmar que o cascade está configurado no schema).
+5. Clique em "Publicar" numa notícia em rascunho e confirme que o status
+   vira `publicado` no Neon (lembre: isso NÃO publica no GitHub — só
+   `publisher.publicar()`, usado por artigos, faz isso).
+
+## Compatibilidade
+
+IDs numéricos "nus" (sem prefixo, ex. `5`) continuam sendo aceitos e
+tratados como artigo — então nenhum link/bookmark antigo quebra.

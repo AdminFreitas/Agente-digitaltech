@@ -303,3 +303,28 @@ class NoticiaRepository:
             """),
             {"limite": limite},
         ).fetchall()
+    def listar_todos(self, limite: int = 50):
+        """Como listar_recentes(), mas com nome da categoria e data_publicacao."""
+        return self.db.execute(
+            text("""
+                SELECT n.id, n.slug, n.titulo, c.nome AS categoria,
+                       n.status, n.fonte, n.data_publicacao, n.criado_em
+                FROM noticias n
+                LEFT JOIN categorias c ON c.id = n.categoria_id
+                ORDER BY n.criado_em DESC LIMIT :limite
+            """),
+            {"limite": limite},
+        ).fetchall()
+
+    def atualizar(self, noticia_id: int, dados: dict):
+        """Atualiza os campos de uma notícia existente pelo ID."""
+        campos = ", ".join([f"{chave} = :{chave}" for chave in dados.keys()])
+        dados["id"] = noticia_id
+        sql = f"UPDATE noticias SET {campos} WHERE id = :id"
+        self.db.execute(text(sql), dados)
+        self.db.commit()
+
+    def excluir(self, noticia_id: int):
+        """Exclui uma notícia pelo ID."""
+        self.db.execute(text("DELETE FROM noticias WHERE id = :id"), {"id": noticia_id})
+        self.db.commit()

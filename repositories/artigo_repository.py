@@ -13,10 +13,9 @@ from sqlalchemy import text
 AUTOR_ID_AGENTE = int(os.getenv("AGENTE_AUTOR_ID", "2"))
 
 
-def _calcular_tempo_leitura(texto_markdown: str) -> str:
+def _calcular_tempo_leitura(texto_markdown: str) -> int:
     palavras = len(texto_markdown.split())
-    minutos = max(1, round(palavras / 200))
-    return f"{minutos} min"
+    return max(1, round(palavras / 200))
 
 
 class ArtigoRepository:

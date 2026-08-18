@@ -13,3 +13,10 @@ venv/
 *.key
 *.p12
 actions-runner/
+
+*.backup*
+*.db
+.cleanup_backup/
+api_conflito_backup/
+database_backup/
+.env*
