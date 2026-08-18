@@ -1,544 +1,708 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DigitalTech — Painel do Agente Editorial</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitalTech — Painel de Controle do Agente</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;transition:all 0.2s ease}:root{--bg-primary:#0d1117;--bg-secondary:#161b22;--bg-tertiary:#21262d;--bg-hover:#1c2128;--bg-input:#0d1117;--bg-card:#161b22;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-tertiary:#6e7681;--text-muted:#484f58;--border-color:#30363d;--border-hover:#8b949e;--accent:#58a6ff;--accent-soft:rgba(88,166,255,.15);--positive:#3fb950;--positive-soft:rgba(63,185,80,.15);--danger:#f85149;--danger-soft:rgba(248,81,73,.15);--warning:#d29922;--warning-soft:rgba(210,153,34,.15);--info:#a371f7;--info-soft:rgba(163,113,247,.15);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;--mono:"SFMono-Regular",Consolas,monospace}
+body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden;font-size:14px;line-height:1.5}.app{display:flex;height:100vh}.sidebar{width:240px;background:var(--bg-secondary);border-right:1px solid var(--border-color);display:flex;flex-direction:column;padding:16px 12px;gap:8px;flex-shrink:0;overflow-y:auto}.sidebar-header{display:flex;align-items:center;gap:10px;padding:0 4px 16px;border-bottom:1px solid var(--border-color)}.logo{width:32px;height:32px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent);font-weight:700}.logo-text{font-weight:600}.logo-sub,.nav-label,.form-hint{font-size:11px;color:var(--text-tertiary)}.nav-section{margin-top:8px}.nav-label{text-transform:uppercase;letter-spacing:.6px;font-weight:600;padding:8px 4px 4px}.nav-item{padding:8px 10px;border-radius:8px;color:var(--text-secondary);cursor:pointer;display:flex;gap:10px;align-items:center;border:1px solid transparent}.nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}.nav-item.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(88,166,255,.25)}.nav-icon{width:16px;height:16px;opacity:.75}.badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:10px;background:var(--danger-soft);color:var(--danger)}.sidebar-footer{margin-top:auto;border-top:1px solid var(--border-color);padding-top:12px}.system-mini-status{padding:10px;border-radius:8px;background:var(--bg-primary);border:1px solid var(--border-color);font-size:11px}.system-mini-status .row{display:flex;justify-content:space-between}.status-dot-inline{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;background:var(--positive)}.main-area{flex:1;display:flex;flex-direction:column;min-width:0}.top-bar{padding:12px 24px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;background:var(--bg-secondary)}.page-title{font-weight:600;font-size:16px}.page-subtitle{font-size:12px;color:var(--text-tertiary);margin-left:12px}.top-bar-right{display:flex;gap:10px}.content-area{flex:1;overflow-y:auto;padding:24px}.btn:disabled{opacity:.45;cursor:not-allowed}.card,.section{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px}.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px}.card{padding:16px}.card-title{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;font-weight:600}.card-value{font-size:28px;font-weight:700;margin-top:8px}.section{margin-bottom:20px;overflow:hidden}.section-header{padding:14px 20px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center}.section-title{font-weight:600}.section-body{padding:16px 20px}.filters-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.search-box,.form-input,.form-textarea,.form-select{padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-primary);font:inherit;outline:none}.search-box{min-width:220px}.form-input:focus,.form-textarea:focus,.form-select:focus,.search-box:focus{border-color:var(--accent)}.form-textarea{resize:vertical;min-height:120px}.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.form-group{display:flex;flex-direction:column;gap:6px}.full-width{grid-column:1/-1}.form-label{font-size:12px;color:var(--text-secondary);font-weight:500}.required{color:var(--danger)}.data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table th{text-align:left;padding:10px 14px;font-size:11px;color:var(--text-tertiary);text-transform:uppercase;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}.data-table td{padding:12px 14px;border-bottom:1px solid var(--border-color);color:var(--text-secondary)}.cell-title{font-weight:500;color:var(--text-primary)}.cell-type,.cell-status{font-size:11px;padding:2px 8px;border-radius:6px}.cell-type.artigo{background:var(--accent-soft);color:var(--accent)}.cell-type.noticia{background:var(--info-soft);color:var(--info)}.cell-status.publicado{background:var(--positive-soft);color:var(--positive)}.cell-status.rascunho{background:var(--text-muted);color:var(--text-secondary)}.cell-status.revisao{background:var(--warning-soft);color:var(--warning)}.seo-google-preview{max-width:620px;border:1px solid var(--border-color);border-radius:10px;padding:16px;background:#fff;color:#202124;margin-top:14px}.seo-google-url{font-size:12px;color:#202124;margin-bottom:4px}.seo-google-title{font-size:20px;line-height:1.3;color:#1a0dab;margin-bottom:4px}.seo-google-description{font-size:13px;line-height:1.45;color:#4d5156}.seo-counter{font-size:11px;color:var(--text-tertiary);text-align:right}.tag-chip{display:inline-flex;align-items:center;padding:2px 7px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-size:11px;margin:2px 3px 2px 0}.tag-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.tag-editor{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-input)}.tag-editor input{flex:1;min-width:160px;border:0;background:transparent;color:var(--text-primary);outline:0}.cell-actions{display:flex;gap:6px}.cell-actions .editor-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:400px}.editor-pane{display:flex;flex-direction:column;border:1px solid var(--border-color);border-radius:10px;overflow:hidden;background:var(--bg-primary)}.editor-pane-header{padding:8px 12px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);font-size:11px;color:var(--text-tertiary);text-transform:uppercase;font-weight:600}.editor-toolbar{display:flex;gap:4px;padding:6px 8px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);flex-wrap:wrap}.toolbar-btn{padding:4px 8px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--text-tertiary);cursor:pointer}.toolbar-btn:hover{background:var(--bg-hover);color:var(--text-primary)}.editor-textarea{flex:1;padding:12px;border:0;background:var(--bg-primary);color:var(--text-primary);font:13px/1.7 var(--mono);resize:none;outline:0}.editor-preview{flex:1;padding:16px;overflow:auto;line-height:1.7}.editor-preview h1,.editor-preview h2,.editor-preview h3{margin:18px 0 8px}.editor-preview h1{font-size:22px;border-bottom:1px solid var(--border-color);padding-bottom:8px}.editor-preview h2{font-size:18px}.editor-preview h3{font-size:15px}.editor-preview p{margin-bottom:12px}.editor-preview img{max-width:100%;border-radius:8px;margin:12px 0}.editor-preview code{background:var(--bg-secondary);padding:2px 6px;border-radius:4px;color:var(--accent)}.editor-preview blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--text-secondary)}.image-preview-box{margin-top:8px;border:1px dashed var(--border-color);border-radius:8px;padding:8px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center;background:var(--bg-primary);position:relative}.image-preview-box img{max-width:100%;max-height:200px;border-radius:6px;display:none}.image-preview-box .img-placeholder{color:var(--text-muted);font-size:12px}.image-list{display:grid;gap:8px;margin-top:10px}.image-item{display:flex;gap:10px;align-items:center;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary)}.image-item img{width:58px;height:42px;object-fit:cover;border-radius:5px}.image-item .meta{flex:1;font-size:12px}.seo-section{border:1px solid var(--border-color);border-radius:10px;padding:16px;background:var(--bg-primary);margin-top:16px}.seo-section-title{font-size:12px;color:var(--text-tertiary);text-transform:uppercase;font-weight:600;margin-bottom:12px}.seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.og-card{border:1px solid var(--border-color);border-radius:8px;overflow:hidden;background:var(--bg-secondary);max-width:420px;margin-top:8px}.og-card img{width:100%;height:120px;object-fit:cover}.og-card-body{padding:10px 12px}.og-card-title{color:var(--accent);font-size:13px}.og-card-desc,.og-card-url{font-size:12px;color:var(--text-secondary)}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:.25s}.modal-overlay.active{opacity:1;pointer-events:auto}.modal{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:16px;width:92%;max-width:980px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column}.modal-header,.modal-footer{padding:16px 24px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center}.modal-footer{border-top:1px solid var(--border-color);border-bottom:0;justify-content:flex-end;gap:10px}.modal-body{padding:20px 24px;overflow:auto}.modal-close{background:none;border:0;color:var(--text-tertiary);font-size:20px;cursor:pointer}.toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}.toast{padding:12px 16px;border-radius:10px;font-size:13px;color:var(--text-primary);border:1px solid var(--border-color);background:var(--bg-secondary);box-shadow:0 8px 24px #0006}.toast.success{border-color:rgba(63,185,80,.4)}.toast.error{border-color:rgba(248,81,73,.4)}.empty-state{text-align:center;padding:40px;color:var(--text-muted)}.hidden{display:none!important}@media(max-width:1024px){.editor-split,.form-grid,.seo-grid{grid-template-columns:1fr}}@media(max-width:768px){.sidebar{width:210px}.content-area{padding:14px}.top-bar{padding:12px 14px}.page-subtitle{display:none}}
 
-    :root {
-      --bg-primary: #0d1117;
-      --bg-secondary: #161b22;
-      --bg-hover: #1c2128;
-      --bg-card: #161b22;
-      --bg-input: #0d1117;
-      --text-primary: #e6edf3;
-      --text-secondary: #8b949e;
-      --text-tertiary: #6e7681;
-      --text-muted: #484f58;
-      --border-color: #30363d;
-      --border-hover: #8b949e;
-      --accent: #58a6ff;
-      --accent-soft: rgba(88, 166, 255, 0.12);
-      --positive: #3fb950;
-      --positive-soft: rgba(63, 185, 80, 0.12);
-      --danger: #f85149;
-      --danger-soft: rgba(248, 81, 73, 0.12);
-      --warning: #d29922;
-      --warning-soft: rgba(210, 153, 34, 0.12);
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      --t-fast: 150ms;
-      --t-normal: 250ms;
-      --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 12px;
-    }
-
-    body { font-family: var(--font-sans); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; line-height: 1.5; }
-    .app { display: flex; min-height: 100vh; }
-
-    .sidebar { width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 14px; gap: 8px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; }
-    .logo { display: flex; align-items: center; gap: 10px; padding: 0 6px 16px 6px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px; }
-    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: var(--bg-primary); font-weight: 700; font-size: 14px; }
-    .logo-text { font-weight: 600; font-size: 15px; color: var(--text-primary); }
-    .nav-item { padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all var(--t-fast) var(--ease-out); border: 1px solid transparent; }
-    .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-    .nav-item.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
-    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
-    .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted); padding-left: 6px; }
-
-    .main { flex: 1; padding: 24px 28px; overflow-y: auto; max-width: 1200px; }
-    .page-title { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
-
-    .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
-    .status-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; display: flex; align-items: center; gap: 12px; transition: border-color var(--t-fast) var(--ease-out); }
-    .status-card:hover { border-color: var(--border-hover); }
-    .status-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .status-icon.online { background: var(--positive-soft); color: var(--positive); }
-    .status-icon.offline { background: var(--danger-soft); color: var(--danger); }
-    .status-icon.warning { background: var(--warning-soft); color: var(--warning); }
-    .status-info { display: flex; flex-direction: column; gap: 2px; }
-    .status-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
-    .status-value { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-    .status-value.online { color: var(--positive); }
-    .status-value.offline { color: var(--danger); }
-    .status-value.warning { color: var(--warning); }
-
-    .section { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .section-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .section-title svg { width: 18px; height: 18px; color: var(--accent); }
-
-    .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
-    .form-group label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
-    .form-input, .form-select, .form-textarea { padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none; transition: border-color var(--t-fast) var(--ease-out); }
-    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
-    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-    .form-textarea { resize: vertical; min-height: 80px; }
-    .form-select { cursor: pointer; }
-    .form-select option { background: var(--bg-secondary); color: var(--text-primary); }
-    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
-    .checkbox-row label { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
-
-    .btn { padding: 9px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-hover); color: var(--text-primary); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all var(--t-fast) var(--ease-out); font-family: inherit; }
-    .btn:hover { border-color: var(--border-hover); background: var(--bg-secondary); }
-    .btn-primary { background: var(--text-primary); color: var(--bg-primary); border-color: var(--text-primary); }
-    .btn-primary:hover { opacity: 0.9; background: var(--text-primary); }
-    .btn-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
-    .btn-danger:hover { background: var(--danger); color: var(--bg-primary); }
-    .btn-sm { padding: 5px 10px; font-size: 12px; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .data-table th { text-align: left; padding: 10px 12px; color: var(--text-tertiary); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border-color); }
-    .data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover td { background: var(--bg-hover); }
-    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
-    .badge-published { background: var(--positive-soft); color: var(--positive); }
-    .badge-draft { background: var(--warning-soft); color: var(--warning); }
-    .badge-failed { background: var(--danger-soft); color: var(--danger); }
-    .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
-
-    .log-container { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; max-height: 240px; overflow-y: auto; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; }
-    .log-entry { padding: 3px 0; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
-    .log-entry:last-child { border-bottom: none; }
-    .log-time { color: var(--text-muted); margin-right: 8px; }
-    .log-info { color: var(--accent); }
-    .log-success { color: var(--positive); }
-    .log-error { color: var(--danger); }
-    .log-warn { color: var(--warning); }
-
-    .models-inline { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-    .model-chip { padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-input); cursor: pointer; transition: all var(--t-fast) var(--ease-out); position: relative; }
-    .model-chip:hover:not(.disabled) { border-color: var(--border-hover); background: var(--bg-hover); }
-    .model-chip.selected { border-color: var(--accent); background: var(--accent-soft); }
-    .model-chip.disabled { opacity: 0.4; cursor: not-allowed; }
-    .model-chip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-    .model-chip-name { font-size: 13px; font-weight: 600; }
-    .model-chip-status { width: 8px; height: 8px; border-radius: 50%; }
-    .model-chip-meta { font-size: 11px; color: var(--text-tertiary); }
-
-    .spinner { width: 14px; height: 14px; border: 2px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: var(--radius-md); background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 13px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transform: translateY(20px); opacity: 0; transition: all var(--t-normal) var(--ease-out); z-index: 1000; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.success { border-color: var(--positive); }
-    .toast.error { border-color: var(--danger); }
-
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-    @media (max-width: 900px) {
-      .sidebar { display: none; }
-      .main { padding: 16px; }
-      .status-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-  </style>
-</head>
+.btn{transition:all 0.2s ease;padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-hover);color:var(--text-secondary);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn:hover{border-color:var(--border-hover);color:var(--text-primary)}
+.btn-primary{background:var(--text-primary) !important;color:var(--bg-primary) !important;border-color:var(--text-primary) !important;font-weight:600}
+.btn-primary:hover{background:#d0d7de !important;border-color:#d0d7de !important;color:var(--bg-primary) !important}
+.btn-primary:active{background:#b0b8c1 !important;border-color:#b0b8c1 !important;transform:scale(0.98)}
+.btn-success:hover{background:var(--positive) !important;color:white !important;border-color:var(--positive) !important}
+.btn-danger:hover{background:var(--danger) !important;color:white !important;border-color:var(--danger) !important}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><style>.top-bar{position:relative}.notification-wrap{position:relative;display:inline-flex}.notification-btn{position:relative}.notification-badge{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;border-radius:10px;background:var(--danger);color:#fff;font-size:10px;display:grid;place-items:center;padding:0 4px}.agent-alert{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;background:var(--positive-soft);color:var(--positive);font-size:11px;border:1px solid rgba(63,185,80,.25)}.agent-alert.warning{background:var(--warning-soft);color:var(--warning);border-color:rgba(210,153,34,.3)}.agent-alert.error{background:var(--danger-soft);color:var(--danger);border-color:rgba(248,81,73,.3)}.notifications-panel{position:absolute;right:24px;top:54px;width:340px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;box-shadow:0 16px 35px #0008;z-index:1200;display:none;overflow:hidden}.notifications-panel.open{display:block}.notifications-head{padding:12px 14px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center}.notification-item{padding:11px 14px;border-bottom:1px solid var(--border-color);font-size:12px;color:var(--text-secondary)}.notification-item strong{display:block;color:var(--text-primary);margin-bottom:3px}.notification-item:last-child{border-bottom:0}</style></head>
 <body>
+<div class="app">
+<aside class="sidebar"><div class="sidebar-header"><div class="logo">DT</div><div><div class="logo-text">DigitalTech</div><div class="logo-sub">Painel do Agente</div></div></div><div class="nav-section"><div class="nav-label">Operacional</div><div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">▦ Dashboard</div><div class="nav-item" data-page="revisao" onclick="navigateTo('revisao')">▤ Fila de Revisão <span class="badge" id="badge-revisao">0</span></div><div class="nav-item" data-page="artigos" onclick="navigateTo('artigos')">✎ Artigos</div><div class="nav-item" data-page="noticias" onclick="navigateTo('noticias')">▤ Notícias</div><div class="nav-item" data-page="historico" onclick="navigateTo('historico')">◷ Histórico</div></div><div class="nav-section"><div class="nav-label">Ações</div><div class="nav-item" data-page="publicar" onclick="navigateTo('publicar')">＋ Publicar Artigo</div><div class="nav-item" data-page="publicar-noticia" onclick="navigateTo('publicar-noticia')">＋ Publicar Notícias</div><div class="nav-item" data-page="gerar" onclick="navigateTo('gerar')">✦ Gerar com IA</div><div class="nav-item" data-page="seo" onclick="navigateTo('seo')">⌕ Configurações de SEO</div><div class="nav-item" data-page="saude" onclick="navigateTo('saude')">♥ Saúde do sistema</div><div class="nav-item" data-page="usuarios" onclick="navigateTo('usuarios')">♙ Cadastros</div><div class="nav-item" data-page="comentarios" onclick="navigateTo('comentarios')">☏ Comentários <span class="badge">3</span></div><div class="nav-item" data-page="monetizacao" onclick="navigateTo('monetizacao')">$ Monetização</div><div class="nav-item" data-page="marketing" onclick="navigateTo('marketing')">◈ Marketing</div><div class="nav-item" data-page="social" onclick="navigateTo('social')">♢ Redes sociais</div><div class="nav-item" data-page="logs" onclick="navigateTo('logs')">⌘ Logs</div></div><div class="nav-section"><div class="nav-label">MÓDULOS DE GESTÃO</div><div class="nav-item" data-page="hub-atalhos" onclick="navigateTo('hub-atalhos')">⊞ Hub de Atalhos</div><div class="nav-item" data-page="google-tools" onclick="navigateTo('google-tools')">Ferramentas Google</div><div class="nav-item" data-page="afiliados" onclick="navigateTo('afiliados')">Vendas &amp; Afiliados</div><div class="nav-item" data-page="financeiro-agente" onclick="navigateTo('financeiro-agente')">Financeiro & Agente</div><div class="nav-item" data-page="redes-sociais" onclick="navigateTo('redes-sociais')">Gestão de Redes</div><div class="nav-item" data-page="email" onclick="navigateTo('email')">E-mail</div><div class="nav-item" data-page="whatsapp" onclick="navigateTo('whatsapp')">WhatsApp</div>
+<div class="nav-item" data-page="cadastros-leitores" onclick="navigateTo('cadastros-leitores')">👥 Leitores Cadastrados</div></div><div class="sidebar-footer"><div class="system-mini-status"><div class="row"><span>Agente</span><b><span class="status-dot-inline"></span>Online</b></div><div class="row"><span>PostgreSQL</span><b><span class="status-dot-inline"></span>OK</b></div><div class="row"><span>GitHub</span><b><span class="status-dot-inline"></span>OK</b></div></div><div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:8px">DigitalTech Agent</div></div></aside>
+<main class="main-area"><div class="top-bar"><div><span class="page-title" id="page-title">Dashboard</span><span class="page-subtitle" id="page-subtitle">Visão geral do agente DigitalTech</span></div><div class="top-bar-right"><span id="agent-alert" class="agent-alert"><span class="status-dot-inline"></span><span id="agent-alert-text">Agente online</span></span><div class="notification-wrap"><button class="btn notification-btn" onclick="toggleNotifications()">🔔<span id="notification-count" class="notification-badge">0</span></button></div><button class="btn" onclick="refreshData()">↻ Atualizar</button><button class="btn btn-primary" onclick="openCreate('artigo')">＋ Novo conteúdo</button><button class="btn" onclick="openCreate('notícia')">＋ Publicar Notícias</button></div><div id="notifications-panel" class="notifications-panel"></div></div><div class="content-area" id="content-area"></div></main></div>
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><strong id="modal-title">Título</strong><button class="modal-close" onclick="closeModal()">×</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div><div class="toast-container" id="toast-container"></div>
+<script>
+const CONFIG={API_URL:'/',useApi:false};
+const state={currentPage:'dashboard',editingId:null,editingType:null,activeForm:'artigo',seoSettings:JSON.parse(localStorage.getItem('digitaltech-seo-settings')||'null')||{siteName:'DigitalTech',defaultTitle:'',defaultDescription:'',defaultUrl:'https://digitaltech.local',googleTitle:'',googleDescription:''},operational:{users:[{name:'Ana Souza',email:'ana@example.com',status:'Ativo',date:'Hoje'},{name:'Carlos Lima',email:'carlos@example.com',status:'Ativo',date:'Ontem'},{name:'Marina Costa',email:'marina@example.com',status:'Pendente',date:'12/08/2026'}],comments:[{author:'João',content:'Excelente artigo sobre IA.',status:'Pendente',date:'Hoje'},{author:'Beatriz',content:'A explicação ficou muito clara.',status:'Aprovado',date:'Ontem'},{author:'Visitante',content:'Tenho uma dúvida sobre o exemplo.',status:'Pendente',date:'Ontem'}],social:[{network:'LinkedIn',title:'Novidades do ecossistema de IA',status:'Publicado',clicks:128},{network:'Instagram',title:'Pipeline moderno de dados',status:'Agendado',clicks:74},{network:'X / Twitter',title:'Boas práticas de SEO',status:'Rascunho',clicks:0}]},categories:JSON.parse(localStorage.getItem('digitaltech-categories')||'null')||['Tecnologia','IA','Banco de Dados','DevOps','Segurança','Linux'],tags:JSON.parse(localStorage.getItem('digitaltech-tags')||'null')||['dados','desenvolvimento','segurança','inovação'],items:JSON.parse(localStorage.getItem('digitaltech-content')||'null')||[
+{id:1,tipo:'artigo',titulo:'Como estruturar um pipeline moderno de dados',resumo:'Boas práticas para pipelines confiáveis.',categoria:'Tecnologia',status:'publicado',slug:'pipeline-moderno-de-dados',conteudo:'# Como estruturar um pipeline moderno de dados\n\nUm pipeline bem desenhado melhora a qualidade e a observabilidade.',imagem_destaque:'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=900',imagens_internas:[],seo:{titulo:'Pipeline moderno de dados | DigitalTech',descricao:'Boas práticas para pipelines confiáveis.',keyword:'pipeline de dados'}},
+{id:2,tipo:'noticia',titulo:'Novidades do ecossistema de IA',resumo:'Principais atualizações da semana.',categoria:'IA',status:'revisao',slug:'novidades-ecossistema-ia',conteudo:'## Novidades do ecossistema de IA\n\nConfira as principais atualizações.',imagem_destaque:'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=900',imagens_internas:[],seo:{titulo:'Novidades de IA',descricao:'Atualizações do ecossistema de IA.',keyword:'inteligência artificial'}}]};
+function saveState(){localStorage.setItem('digitaltech-content',JSON.stringify(state.items));localStorage.setItem('digitaltech-categories',JSON.stringify(state.categories));localStorage.setItem('digitaltech-tags',JSON.stringify(state.tags));localStorage.setItem('digitaltech-seo-settings',JSON.stringify(state.seoSettings))}function normalizeTaxonomies(){state.items.forEach(x=>{x.tags=Array.isArray(x.tags)?x.tags:[];if(x.categoria&&!state.categories.includes(x.categoria))state.categories.push(x.categoria);x.tags.forEach(t=>{if(t&&!state.tags.includes(t))state.tags.push(t)})})}normalizeTaxonomies();saveState();function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function slugify(v=''){return v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').slice(0,70)}function showToast(msg,type='info'){const e=document.createElement('div');e.className='toast '+type;e.textContent=msg;document.getElementById('toast-container').appendChild(e);setTimeout(()=>e.remove(),3500)}function openModal(title,body,footer=''){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=body;document.getElementById('modal-footer').innerHTML=footer;document.getElementById('modal-overlay').classList.add('active')}function closeModal(e){if(!e||e.target.id==='modal-overlay')document.getElementById('modal-overlay').classList.remove('active')}
+function markdownToHtml(md=''){let h=esc(md);h=h.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">').replace(/^### (.*)$/gim,'<h3>$1</h3>').replace(/^## (.*)$/gim,'<h2>$1</h2>').replace(/^# (.*)$/gim,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/^> (.*)$/gim,'<blockquote>$1</blockquote>').replace(/^- (.*)$/gim,'<li>$1</li>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>').replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>');return '<p>'+h+'</p>'}function insertMarkdown(before,after,id='form-conteudo'){const ta=document.getElementById(id);if(!ta)return;const a=ta.selectionStart,b=ta.selectionEnd,v=ta.value;ta.value=v.slice(0,a)+before+v.slice(a,b)+after+v.slice(b);ta.focus();updatePreview(id)}function updatePreview(id='form-conteudo'){const p=document.getElementById('form-preview');const t=document.getElementById(id);if(p&&t)p.innerHTML=t.value?markdownToHtml(t.value):'<span style="color:var(--text-muted)">O preview aparecerá aqui...</span>'}
+state.operational.comments.forEach((c,i)=>{if(!c.id)c.id='comment-'+i});
+function navigateTo(page){state.currentPage=page;document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===page));const meta={dashboard:['Dashboard','Visão geral do agente DigitalTech'],artigos:['Artigos','Gerenciar artigos publicados e rascunhos'],noticias:['Notícias','Gerenciar notícias'],revisao:['Fila de Revisão','Itens que precisam de intervenção'],historico:['Histórico','Todas as atividades'],publicar:['Publicar Artigo','Criar e publicar conteúdo'], 'publicar-noticia':['Publicar Notícias','Criar e publicar uma notícia'],gerar:['Gerar com IA','Preparar conteúdo com assistência'],seo:['Configurações de SEO','Defina os padrões de otimização e visualize o resultado no Google'],saude:['Saúde do sistema','Monitoramento do agente, integrações e serviços'],usuarios:['Cadastros','Usuários registrados e autenticação'],comentarios:['Comentários','Moderação e acompanhamento das interações'],monetizacao:['Monetização','Anúncios, vendas, cliques e indicadores financeiros'],marketing:['Marketing','Campanhas, conversões e desempenho do conteúdo'],social:['Redes sociais','Gerar, revisar e acompanhar publicações sociais'],logs:['Logs','Atividade operacional e eventos do agente'],'google-tools':['Ferramentas Google','Monitoramento e métricas do ecossistema Google'],'afiliados':['Vendas & Afiliados','Gestão de produtos, vendas e comissões'],'financeiro-agente':['Financeiro & Agente','Fluxo de caixa, ROI e status operacional'],'redes-sociais':['Redes Sociais','Gestão de postagens e engajamento'],'email':['E-mail','Campanhas e disparos de e-mail'],'whatsapp':['WhatsApp','Disparos e automações via WhatsApp'],'cadastros-leitores':['Leitores Cadastrados','Newsletter e novidades'],'hub-atalhos':['Hub de Atalhos','Acesso rápido aos módulos e plataformas externas'],};document.getElementById('page-title').textContent=meta[page]?.[0]||'Dashboard';document.getElementById('page-subtitle').textContent=meta[page]?.[1]||'';renderPage(page)}function renderPage(p){const c=document.getElementById('content-area');if(p==='dashboard'){c.innerHTML=renderDashboard();setTimeout(initMiniCharts,100)}else if(p==='artigos'||p==='noticias')c.innerHTML=renderLibrary(p);else if(p==='revisao')c.innerHTML=renderReview();else if(p==='historico')c.innerHTML=renderHistory();else if(p==='publicar')c.innerHTML=renderForm('artigo');else if(p==='publicar-noticia')c.innerHTML=renderForm('notícia');else if(p==='gerar')c.innerHTML=renderGenerate();else if(p==='seo')c.innerHTML=renderSEOSettings();else if(['saude','usuarios','comentarios','monetizacao','marketing','social','logs'].includes(p))c.innerHTML=renderOperational(p);else if(p==='google-tools') { c.innerHTML=renderGoogleToolsModule(); setTimeout(initGoogleChart, 100); }
+  else if(p==='hub-atalhos') { c.innerHTML=renderHubAtalhosModule(); }
+  else if(p==='financeiro-agente') { c.innerHTML=renderFinanceiroModule(); setTimeout(initFinanceChart, 100); }
+  else if(p==='afiliados') { c.innerHTML=renderAfiliadosModule(); setTimeout(initAfiliadosChart, 100); }
+  else if(p==='redes-sociais') { c.innerHTML=renderSocialModule(); setTimeout(initSocialChart, 100); }
+  else if(p==='email') { c.innerHTML=renderEmailPage(); }
+  else if(p==='whatsapp') { c.innerHTML=renderWhatsappPage(); }
+  else if(p==='cadastros-leitores') { c.innerHTML=renderCadastroUsuariosPage(); }
+  else { c.innerHTML='<div class="section"><div class="section-header"><span class="section-title">'+p+'</span></div><div class="section-body"><p>Módulo em desenvolvimento...</p></div></div>' }
+  updateCounts()}
 
-  <div class="app">
-    <aside class="sidebar">
-      <div class="logo">
-        <div class="logo-icon">DT</div>
-        <span class="logo-text">DigitalTech</span>
+function renderGoogleToolsModule(){
+  return `
+    <div class="filters-bar">
+      <span style="font-weight:600">Filtro de Período:</span>
+      <select class="form-select" id="google-period"><option>Últimos 7 dias</option><option selected>Últimos 30 dias</option><option>Último trimestre</option></select>
+      <button class="btn btn-primary" onclick="showToast('Sincronizado com APIs do Google com sucesso!','success')">↻ Sincronizar Google APIs</button>
+      <a href="https://analytics.google.com" target="_blank" class="btn" style="text-decoration:none">Abrir Analytics ↗</a>
+      <a href="https://search.google.com/search-console" target="_blank" class="btn" style="text-decoration:none">Search Console ↗</a>
+    </div>
+    <div class="cards-grid">
+      <div class="card"><div class="card-title">Google Analytics 4</div><div class="card-value">48.2k</div><div class="card-meta">Sessões totais (+14.2%)</div></div>
+      <div class="card"><div class="card-title">Search Console</div><div class="card-value">12.6k</div><div class="card-meta">Cliques orgânicos</div></div>
+      <div class="card"><div class="card-title">Google Ads</div><div class="card-value">R$ 1.420</div><div class="card-meta">Investimento em campanhas</div></div>
+      <div class="card"><div class="card-title">CTR Médio</div><div class="card-value" style="color:var(--positive)">3.45%</div><div class="card-meta">Taxa de cliques geral</div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Desempenho de Tráfego Orgânico (Search Console)</span></div>
+      <div class="section-body">
+        <div style="height:260px"><canvas id="googleChartDetailed"></canvas></div>
       </div>
-      <div class="nav-item active" id="nav-dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Dashboard
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Principais Palavras-Chave Indexadas</span></div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead><tr><th>Palavra-chave</th><th>Cliques</th><th>Impressões</th><th>CTR</th><th>Posição Média</th></tr></thead>
+          <tbody>
+            <tr><td><div class="cell-title">pipeline moderno de dados</div></td><td>3.420</td><td>45.100</td><td>7.58%</td><td>2.1</td></tr>
+            <tr><td><div class="cell-title">ecossistema de inteligência artificial</div></td><td>2.890</td><td>38.400</td><td>7.52%</td><td>3.4</td></tr>
+            <tr><td><div class="cell-title">automação com agentes ia</div></td><td>1.950</td><td>24.100</td><td>8.09%</td><td>1.8</td></tr>
+            <tr><td><div class="cell-title">boas práticas de seo em blogs</div></td><td>1.430</td><td>19.800</td><td>7.22%</td><td>4.1</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="nav-item" id="nav-artigos">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Artigos
-      </div>
-      <div class="nav-item" id="nav-noticias">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
-        Notícias
-      </div>
-      <div class="nav-item" id="nav-logs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Logs
-      </div>
-      <div class="sidebar-footer">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--positive);"></span><span>API Online</span></div>
-        <div style="color:var(--text-muted);">v1.0.0 • Local</div>
-      </div>
-    </aside>
+    </div>
+  `;
+}
 
-    <main class="main">
-      <h1 class="page-title">Painel do Agente Editorial</h1>
-      <p class="page-subtitle">Gerencie artigos, notícias e monitore o status do sistema</p>
-
-      <div class="status-grid">
-        <div class="status-card">
-          <div class="status-icon online" id="status-api-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-          <div class="status-info"><span class="status-label">API FastAPI</span><span class="status-value online" id="status-api">Online</span></div>
-        </div>
-        <div class="status-card">
-          <div class="status-icon online" id="status-ollama-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
-          <div class="status-info"><span class="status-label">Ollama</span><span class="status-value online" id="status-ollama">Online</span></div>
-        </div>
-        <div class="status-card">
-          <div class="status-icon online" id="status-db-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
-          <div class="status-info"><span class="status-label">Banco de Dados</span><span class="status-value online" id="status-db">Online</span></div>
-        </div>
-        <div class="status-card">
-          <div class="status-icon online" id="status-github-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></div>
-          <div class="status-info"><span class="status-label">GitHub</span><span class="status-value online" id="status-github">Conectado</span></div>
+function renderModulePlaceholder(page){
+  const titles = {
+    'google-tools': 'Ferramentas Google',
+    'afiliados': 'Vendas & Afiliados',
+    'financeiro-agente': 'Financeiro & Agente',
+    'redes-sociais': 'Redes Sociais'
+  };
+  return `
+    <div class="section">
+      <div class="section-header"><span class="section-title">${titles[page]}</span></div>
+      <div class="section-body">
+        <div class="empty-state">
+          <div style="font-size: 48px; margin-bottom: 16px;">🛠️</div>
+          <h3>Módulo em Desenvolvimento</h3>
+          <p style="margin-top: 8px; color: var(--text-tertiary);">O conteúdo da página <b>${titles[page]}</b> está sendo preparado e estará disponível em breve.</p>
+          <button class="btn btn-primary" style="margin-top: 20px;" onclick="navigateTo('dashboard')">Voltar para Dashboard</button>
         </div>
       </div>
+    </div>
+  `;
+}
 
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Gerar Artigo</div>
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="flex: 2;"><label for="artigo-tema">Tema do artigo</label><input type="text" class="form-input" id="artigo-tema" placeholder="Ex: Inteligência Artificial na Educação"></div>
-          <div class="form-group"><label for="artigo-categoria">Categoria</label><select class="form-select" id="artigo-categoria"><option value="inteligencia-artificial">Inteligência Artificial</option><option value="tecnologia">Tecnologia</option><option value="programacao">Programação</option><option value="ciencia-de-dados">Ciência de Dados</option><option value="cyberseguranca">Cybersegurança</option><option value="cloud">Cloud Computing</option></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label for="artigo-tom">Tom de escrita</label><select class="form-select" id="artigo-tom"><option value="tecnico">Técnico</option><option value="divulgativo">Divulgativo</option><option value="tutorial">Tutorial</option><option value="opiniao">Opinião</option></select></div>
-          <div class="form-group"><label for="artigo-tamanho">Tamanho estimado</label><select class="form-select" id="artigo-tamanho"><option value="curto">Curto (~500 palavras)</option><option value="medio" selected>Médio (~1000 palavras)</option><option value="longo">Longo (~2000 palavras)</option></select></div>
-        </div>
-        <div class="checkbox-row"><input type="checkbox" id="artigo-publicar" checked><label for="artigo-publicar">Publicar imediatamente no GitHub</label></div>
-        <button class="btn btn-primary" id="btn-gerar-artigo" onclick="gerarArtigo()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Gerar Artigo</button>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>Gerar Notícia</div>
-        </div>
-        <div class="form-row">
-          <div class="form-group" style="flex: 2;"><label for="noticia-tema">Tema ou fonte da notícia</label><input type="text" class="form-input" id="noticia-tema" placeholder="Ex: Lançamento do novo modelo GPT-5"></div>
-          <div class="form-group"><label for="noticia-categoria">Categoria</label><select class="form-select" id="noticia-categoria"><option value="tecnologia">Tecnologia</option><option value="ia">Inteligência Artificial</option><option value="startup">Startups</option><option value="seguranca">Segurança</option><option value="hardware">Hardware</option></select></div>
-        </div>
-        <div class="checkbox-row"><input type="checkbox" id="noticia-publicar" checked><label for="noticia-publicar">Publicar imediatamente no GitHub</label></div>
-        <button class="btn btn-primary" id="btn-gerar-noticia" onclick="gerarNoticia()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Gerar Notícia</button>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Modelos de IA</div>
-          <span style="font-size:11px;color:var(--text-muted);background:var(--bg-hover);padding:2px 8px;border-radius:4px;">3/6 ativos</span>
-        </div>
-        <div class="models-inline">
-          <div class="model-chip selected" onclick="selectModel(this, 'llama3.1:70b', 'Llama 3.1 70B')"><div class="model-chip-header"><span class="model-chip-name">Llama 3.1 70B</span><span class="model-chip-status" style="background:var(--positive);"></span></div><div class="model-chip-meta">Meta • Local • 70B params</div></div>
-          <div class="model-chip" onclick="selectModel(this, 'mistral-large', 'Mistral Large 2')"><div class="model-chip-header"><span class="model-chip-name">Mistral Large 2</span><span class="model-chip-status" style="background:var(--positive);"></span></div><div class="model-chip-meta">Mistral AI • Local • 123B params</div></div>
-          <div class="model-chip" onclick="selectModel(this, 'qwen2.5:72b', 'Qwen 2.5 72B')"><div class="model-chip-header"><span class="model-chip-name">Qwen 2.5 72B</span><span class="model-chip-status" style="background:var(--positive);"></span></div><div class="model-chip-meta">Alibaba • Local • 72B params</div></div>
-          <div class="model-chip disabled"><div class="model-chip-header"><span class="model-chip-name">GPT-4o</span><span class="model-chip-status" style="background:var(--danger);"></span></div><div class="model-chip-meta">OpenAI • API key não configurada</div></div>
-          <div class="model-chip disabled"><div class="model-chip-header"><span class="model-chip-name">Claude 3.5 Sonnet</span><span class="model-chip-status" style="background:var(--danger);"></span></div><div class="model-chip-meta">Anthropic • API key não configurada</div></div>
-          <div class="model-chip disabled"><div class="model-chip-header"><span class="model-chip-name">Gemini 1.5 Pro</span><span class="model-chip-status" style="background:var(--danger);"></span></div><div class="model-chip-meta">Google • API key não configurada</div></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Últimos Artigos</div>
-          <button class="btn btn-sm" onclick="carregarArtigos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Atualizar</button>
-        </div>
-        <table class="data-table"><thead><tr><th>ID</th><th>Título</th><th>Categoria</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead><tbody id="artigos-tbody">
-          <tr><td>25</td><td>Green Light IA: O futuro da automação editorial</td><td>Inteligência Artificial</td><td><span class="badge badge-draft"><span class="badge-dot" style="background:var(--warning);"></span> Rascunho</span></td><td>05/08/2026</td><td><button class="btn btn-sm" onclick="publicarArtigo(25)">Publicar</button> <button class="btn btn-sm btn-danger" onclick="excluirArtigo(25)">Excluir</button></td></tr>
-          <tr><td>24</td><td>APIs REST: Boas práticas em 2026</td><td>Programação</td><td><span class="badge badge-published"><span class="badge-dot" style="background:var(--positive);"></span> Publicado</span></td><td>04/08/2026</td><td><button class="btn btn-sm" onclick="verNoGithub(24)">GitHub</button></td></tr>
-          <tr><td>23</td><td>PostgreSQL vs MySQL: Qual escolher?</td><td>Banco de Dados</td><td><span class="badge badge-published"><span class="badge-dot" style="background:var(--positive);"></span> Publicado</span></td><td>03/08/2026</td><td><button class="btn btn-sm" onclick="verNoGithub(23)">GitHub</button></td></tr>
-        </tbody></table>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Logs do Sistema</div>
-          <button class="btn btn-sm" onclick="limparLogs()">Limpar</button>
-        </div>
-        <div class="log-container" id="log-container">
-          <div class="log-entry"><span class="log-time">[08:42:15]</span><span class="log-info">INFO</span> — Sistema iniciado. API rodando em localhost:8000</div>
-          <div class="log-entry"><span class="log-time">[08:42:16]</span><span class="log-success">OK</span> — Conexão com Ollama estabelecida (Llama 3.1 70B)</div>
-          <div class="log-entry"><span class="log-time">[08:42:17]</span><span class="log-success">OK</span> — Banco de dados conectado (SQLite)</div>
-          <div class="log-entry"><span class="log-time">[08:42:18]</span><span class="log-success">OK</span> — GitHub API autenticado</div>
-          <div class="log-entry"><span class="log-time">[08:45:03]</span><span class="log-info">INFO</span> — Artigo #25 gerado com sucesso (Green Light IA)</div>
-        </div>
-      </div>
-    </main>
+function renderDashboard(){const a=state.items.filter(x=>x.tipo==='artigo'),n=state.items.filter(x=>x.tipo==='noticia');return '<div class="cards-grid"><div class="card"><div class="card-title">Artigos</div><div class="card-value">'+a.length+'</div><div class="card-meta">Criados e revisados</div></div><div class="card"><div class="card-title">Notícias</div><div class="card-value">'+n.length+'</div><div class="card-meta">Gerenciadas no blog</div></div><div class="card"><div class="card-title">Em revisão</div><div class="card-value" style="color:var(--warning)">'+state.items.filter(x=>x.status==='revisao').length+'</div><div class="card-meta">Aguardando aprovação</div></div><div class="card"><div class="card-title">Usuários</div><div class="card-value">'+state.operational.users.length+'</div><div class="card-meta">Cadastros monitorados</div></div><div class="card"><div class="card-title">Comentários</div><div class="card-value" style="color:var(--warning)">'+state.operational.comments.filter(x=>x.status==='Pendente').length+'</div><div class="card-meta">Pendentes de moderação</div></div><div class="card"><div class="card-title">Receita estimada</div><div class="card-value" style="font-size:22px;color:var(--positive)">R$ 4.280</div><div class="card-meta">Últimos 30 dias</div></div><div class="card"><div class="card-title">Cliques em anúncios</div><div class="card-value" style="font-size:22px;color:var(--accent)">12.640</div><div class="card-meta">CTR médio: 2,84%</div></div><div class="card"><div class="card-title">Saúde do agente</div><div class="card-value" style="font-size:22px;color:var(--positive)">Online</div><div class="card-meta">API, IA e banco operando</div></div></div><div class="section"><div class="section-header"><span class="section-title">Manutenção rápida do blog</span><div style="display:flex;gap:8px"><button class="btn" onclick="navigateTo(\'saude\')">Ver saúde</button><button class="btn btn-primary" onclick="navigateTo(\'revisao\')">Abrir revisão</button></div></div><div class="section-body"><div class="cards-grid" style="margin-bottom:0"><div class="card"><div class="card-title">Última geração com IA</div><div class="card-value" style="font-size:18px">Concluída</div><div class="card-meta">2 conteúdos aguardam revisão</div></div><div class="card"><div class="card-title">Autenticação</div><div class="card-value" style="font-size:18px;color:var(--positive)">Logado</div><div class="card-meta">Sessão administrativa ativa</div></div><div class="card"><div class="card-title">Redes sociais</div><div class="card-value" style="font-size:18px">5 agendadas</div><div class="card-meta">LinkedIn, Instagram e X</div></div><div class="card"><div class="card-title">Marketing</div><div class="card-value" style="font-size:18px;color:var(--warning)">1 alerta</div><div class="card-meta">Campanha precisa de atenção</div></div></div></div></div><div class="section"><div class="section-header"><span class="section-title">Atividade recente</span><button class="btn" onclick="navigateTo(\'logs\')">Ver logs</button></div><div class="section-body">'+renderRows(state.items.slice().reverse().slice(0,6))+'</div></div>' + "<div class=\"section\">  <div class=\"section-header\"><span class=\"section-title\">Hub de Navegação & Atalhos</span></div>  <div class=\"section-body\">    <div class=\"cards-grid\" style=\"grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 0;\">      <div class=\"card\">        <div class=\"card-title\">Ferramentas Google</div>        <div class=\"card-meta\">Cliques e CTR</div>        <button class=\"btn btn-primary\" style=\"margin: 12px 0; width: 100%; justify-content: center;\" onclick=\"navigateTo('google-tools')\">Ver Módulo Google →</button>        <div class=\"tag-list\">          <a href=\"https://analytics.google.com\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Analytics ↗</a>          <a href=\"https://search.google.com/search-console\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Search Console ↗</a>          <a href=\"https://ads.google.com\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Google Ads ↗</a>        </div>      </div>      <div class=\"card\">        <div class=\"card-title\">Hub de Afiliados</div>        <div class=\"card-meta\">Vendas/Comissões</div>        <button class=\"btn btn-primary\" style=\"margin: 12px 0; width: 100%; justify-content: center;\" onclick=\"navigateTo('afiliados')\">Ver Vendas & Afiliados →</button>        <div class=\"tag-list\">          <a href=\"https://hotmart.com\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Hotmart ↗</a>          <a href=\"https://shopee.com.br\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Shopee ↗</a>          <a href=\"https://amazon.com.br\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Amazon ↗</a>          <a href=\"https://mercadolivre.com.br\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Mercado Livre ↗</a>        </div>      </div>      <div class=\"card\">        <div class=\"card-title\">Financeiro & Agente</div>        <div class=\"card-meta\">ROI/Lucro e Status</div>        <button class=\"btn btn-primary\" style=\"margin: 12px 0; width: 100%; justify-content: center;\" onclick=\"navigateTo('financeiro-agente')\">Ver Fluxo Financeiro →</button>        <div class=\"tag-list\">          <a href=\"#\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Banco/Gateway ↗</a>          <a href=\"#\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Servidor/Hospedagem ↗</a>        </div>      </div>      <div class=\"card\">        <div class=\"card-title\">Redes Sociais</div>        <div class=\"card-meta\">Agendamentos e alcance</div>        <button class=\"btn btn-primary\" style=\"margin: 12px 0; width: 100%; justify-content: center;\" onclick=\"navigateTo('redes-sociais')\">Gerenciar Redes →</button>        <div class=\"tag-list\">          <a href=\"https://business.facebook.com\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">Meta Business ↗</a>          <a href=\"https://studio.youtube.com\" target=\"_blank\" class=\"tag-chip\" style=\"text-decoration:none\">YouTube Studio ↗</a>        </div>      </div>    </div>  </div></div>"}
+function renderLibrary(type){const label=type==='artigos'?'artigo':'noticia';const displayLabel=label==='noticia'?'notícia':'artigo';const cats=state.categories.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');return '<div class="filters-bar"><input class="search-box" id="library-search" placeholder="Buscar '+displayLabel+' por título, autor, categoria ou tag..." oninput="filterLibrary(\''+type+'\')"><select class="form-select" id="library-status-filter" onchange="filterLibrary(\''+type+'\')"><option value="">Todos os status</option><option value="rascunho">Rascunho</option><option value="revisao">Em revisão</option><option value="publicado">Publicado</option><option value="rejeitado">Rejeitado</option></select><select class="form-select" id="library-category-filter" onchange="filterLibrary(\''+type+'\')"><option value="">Todas as categorias</option>'+cats+'</select><input class="search-box" id="library-tag-filter" placeholder="Filtrar por tag" oninput="filterLibrary(\''+type+'\')"><input class="form-input" id="library-date-filter" type="date" onchange="filterLibrary(\''+type+'\')" title="A partir desta data"><select class="form-select" id="library-sort-filter" onchange="filterLibrary(\''+type+'\')"><option value="recent">Mais recentes</option><option value="oldest">Mais antigos</option><option value="title">Título A–Z</option><option value="status">Status</option></select><button class="btn" onclick="clearLibraryFilters(\''+type+'\')">Limpar filtros</button><button class="btn btn-primary" onclick="openCreate(\''+displayLabel+'\')">＋ Novo '+displayLabel+'</button>'+(type==='noticias'?'<button class="btn" onclick="navigateTo(\'gerar\')">✦ Gerar notícia com IA</button>':'')+'<button class="btn" onclick="openTaxonomyManager()">⚙ Categorias e tags</button></div><div class="section"><div class="section-header"><span class="section-title">'+(type==='artigos'?'Artigos':'Notícias')+'</span><span id="library-count" style="color:var(--text-tertiary);font-size:12px">'+state.items.filter(x=>x.tipo===label).length+' itens</span></div><div class="section-body" id="library-table">'+renderRows(state.items.filter(x=>x.tipo===label))+'</div></div>'}
+function filterLibrary(type){const label=type==='artigos'?'artigo':'noticia';const q=(document.getElementById('library-search')?.value||'').toLowerCase();const status=document.getElementById('library-status-filter')?.value||'';const cat=document.getElementById('library-category-filter')?.value||'';const tag=(document.getElementById('library-tag-filter')?.value||'').toLowerCase();const from=document.getElementById('library-date-filter')?.value||'';const sort=document.getElementById('library-sort-filter')?.value||'recent';let filtered=state.items.filter(x=>{const text=(x.titulo+' '+x.resumo+' '+(x.autor||'')+' '+(x.categoria||'')+' '+(x.tags||[]).join(' ')).toLowerCase();const date=(x.created_at||x.updated_at||'').slice(0,10);return x.tipo===label&&(!q||text.includes(q))&&(!status||x.status===status)&&(!cat||x.categoria===cat)&&(!tag||(x.tags||[]).some(t=>t.toLowerCase().includes(tag)))&&(!from||!date||date>=from)});filtered.sort((a,b)=>{if(sort==='title')return (a.titulo||'').localeCompare(b.titulo||'');if(sort==='status')return (a.status||'').localeCompare(b.status||'');const da=new Date(a.created_at||0).getTime(),db=new Date(b.created_at||0).getTime();return sort==='oldest'?da-db:db-da});const table=document.getElementById('library-table');if(table)table.innerHTML=filtered.length?renderRows(filtered):'<div class="empty-state">Nenhum conteúdo corresponde aos filtros atuais.</div>';const count=document.getElementById('library-count');if(count)count.textContent=filtered.length+' de '+state.items.filter(x=>x.tipo===label).length+' itens'}
+function clearLibraryFilters(type){['library-search','library-tag-filter','library-date-filter'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});['library-status-filter','library-category-filter','library-sort-filter'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=id==='library-sort-filter'?'recent':''});filterLibrary(type)}
+function renderRows(items){if(!items.length)return '<div class="empty-state">Nenhum conteúdo encontrado.</div>';return `<div style="overflow:auto"><table class="data-table"><thead><tr><th>Título</th><th>Tipo</th><th>Status</th><th>Categoria</th><th>Tags</th><th>Ações</th></tr></thead><tbody>${items.map(x=>`<tr><td><div class="cell-title">${esc(x.titulo)}</div><div style="font-size:11px;color:var(--text-muted)">${esc(x.slug||'')}</div></td><td><span class="cell-type ${x.tipo}">${x.tipo}</span></td><td><span class="cell-status ${x.status}">${x.status}</span></td><td>${esc(x.categoria||'—')}</td><td><div class="tag-list">${(x.tags||[]).map(t=>`<span class="tag-chip">${esc(t)}</span>`).join('')||'—'}</div></td><td><div class="cell-actions"><button class="btn" onclick="viewItem(${x.id})">Ver</button><button class="btn" onclick="editItem(${x.id})">Editar</button><button class="btn btn-danger" onclick="deleteItem(${x.id})">Excluir</button></div></td></tr>`).join('')}</tbody></table></div>`}
+function renderReview(){return `<div class="section"><div class="section-header"><span class="section-title">Conteúdos aguardando revisão</span></div><div class="section-body">${renderRows(state.items.filter(x=>x.status==='revisao'))}</div></div>`}function renderHistory(){return `<div class="section"><div class="section-header"><span class="section-title">Histórico de conteúdos</span></div><div class="section-body">${renderRows(state.items.slice().reverse())}</div></div>`}function updateCounts(){document.getElementById('badge-revisao').textContent=state.items.filter(x=>x.status==='revisao').length}
+function renderSEOSettings(){const d=state.seoSettings;return `<div class="section"><div class="section-header"><span class="section-title">Configurações de SEO</span><span class="status-pill online">Ativo</span></div><div class="section-body"><div class="form-grid"><div class="form-group"><label class="form-label">Nome do site</label><input class="form-input" id="seo-site-name" value="${esc(d.siteName||'')}" oninput="updateGlobalSEOPreview()" placeholder="DigitalTech"></div><div class="form-group"><label class="form-label">URL base do site</label><input class="form-input" id="seo-default-url" value="${esc(d.defaultUrl||'')}" oninput="updateGlobalSEOPreview()" placeholder="https://seusite.com"></div><div class="form-group full-width"><label class="form-label">Meta Title padrão</label><input class="form-input" id="seo-global-title" maxlength="60" value="${esc(d.defaultTitle||'')}" oninput="updateGlobalSEOPreview()" placeholder="Título padrão para páginas sem título específico"><div class="seo-counter"><span id="seo-global-title-count">${(d.defaultTitle||'').length}</span>/60 caracteres</div></div><div class="form-group full-width"><label class="form-label">Meta Description padrão</label><textarea class="form-textarea" id="seo-global-description" maxlength="160" oninput="updateGlobalSEOPreview()" placeholder="Descrição padrão para mecanismos de busca">${esc(d.defaultDescription||'')}</textarea><div class="seo-counter"><span id="seo-global-description-count">${(d.defaultDescription||'').length}</span>/160 caracteres</div></div><div class="form-group full-width"><label class="form-label">Título exibido no preview do Google</label><input class="form-input" id="seo-google-title" maxlength="60" value="${esc(d.googleTitle||d.defaultTitle||'')}" oninput="updateGlobalSEOPreview()"></div><div class="form-group full-width"><label class="form-label">Descrição exibida no preview do Google</label><textarea class="form-textarea" id="seo-google-description" maxlength="160" oninput="updateGlobalSEOPreview()">${esc(d.googleDescription||d.defaultDescription||'')}</textarea></div></div><div class="seo-section"><div class="seo-section-title">Preview do Google</div><div class="seo-google-preview"><div class="seo-google-url" id="global-google-url">${esc(d.defaultUrl||'https://digitaltech.local')}/</div><div class="seo-google-title" id="global-google-title-preview">${esc(d.googleTitle||d.defaultTitle||'Título da página')}</div><div class="seo-google-description" id="global-google-description-preview">${esc(d.googleDescription||d.defaultDescription||'A descrição da página aparecerá aqui nos resultados de busca.')}</div></div><p class="form-hint" style="margin-top:10px">A prévia é uma aproximação visual do resultado orgânico. O Google pode alterar o título e a descrição exibidos.</p></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px"><button class="btn" onclick="resetSEOSettings()">Restaurar padrões</button><button class="btn btn-primary" onclick="saveSEOSettings()">Salvar configurações de SEO</button></div></div></div>`}function updateGlobalSEOPreview(){const title=document.getElementById('seo-google-title')?.value||document.getElementById('seo-global-title')?.value||'Título da página';const desc=document.getElementById('seo-google-description')?.value||document.getElementById('seo-global-description')?.value||'A descrição da página aparecerá aqui nos resultados de busca.';const url=document.getElementById('seo-default-url')?.value||'https://digitaltech.local';if(document.getElementById('global-google-title-preview'))document.getElementById('global-google-title-preview').textContent=title;if(document.getElementById('global-google-description-preview'))document.getElementById('global-google-description-preview').textContent=desc;if(document.getElementById('global-google-url'))document.getElementById('global-google-url').textContent=url.replace(/\/$/,'')+'/';if(document.getElementById('seo-global-title-count'))document.getElementById('seo-global-title-count').textContent=(document.getElementById('seo-global-title')?.value||'').length;if(document.getElementById('seo-global-description-count'))document.getElementById('seo-global-description-count').textContent=(document.getElementById('seo-global-description')?.value||'').length}function saveSEOSettings(){state.seoSettings={siteName:document.getElementById('seo-site-name').value.trim(),defaultUrl:document.getElementById('seo-default-url').value.trim(),defaultTitle:document.getElementById('seo-global-title').value.trim(),defaultDescription:document.getElementById('seo-global-description').value.trim(),googleTitle:document.getElementById('seo-google-title').value.trim(),googleDescription:document.getElementById('seo-google-description').value.trim()};saveState();showToast('Configurações de SEO salvas.','success')}function resetSEOSettings(){state.seoSettings={siteName:'DigitalTech',defaultTitle:'',defaultDescription:'',defaultUrl:'https://digitaltech.local',googleTitle:'',googleDescription:''};saveState();document.getElementById('content-area').innerHTML=renderSEOSettings();showToast('Configurações de SEO restauradas.','info')}
+function renderOperational(page){
+  const op=state.operational;
+  const metricCards=(items)=>'<div class="cards-grid">'+items.map(x=>'<div class="card"><div class="card-title">'+x[0]+'</div><div class="card-value" style="font-size:24px;'+(x[3]?'color:'+x[3]:'')+'">'+x[1]+'</div><div class="card-meta">'+(x[2]||'')+'</div></div>').join('')+'</div>';
+  const section=(title,body,action)=>'<div class="section"><div class="section-header"><span class="section-title">'+title+'</span>'+(action||'')+'</div><div class="section-body">'+body+'</div></div>';
+  if(page==='saude') return metricCards([['Agente','Online','Operando normalmente','var(--positive)'],['Autenticação','Logado','Sessão administrativa ativa','var(--positive)'],['API','OK','Última verificação: agora','var(--positive)'],['Banco de dados','OK','Persistência ativa','var(--positive)'],['IA','Disponível','Modelo configurado','var(--positive)'],['Imagens','OK','Serviço respondendo','var(--positive)']])+section('Diagnóstico rápido','<table class="data-table"><tr><th>Componente</th><th>Status</th><th>Último evento</th><th>Ação</th></tr><tr><td>Agente de conteúdo</td><td><span class="cell-status publicado">Operando</span></td><td>Geração e revisão disponíveis</td><td><button class="btn" onclick="showToast(\'Diagnóstico executado.\',\'success\')">Testar</button></td></tr><tr><td>Publicação do blog</td><td><span class="cell-status publicado">Operando</span></td><td>Artigos e notícias sincronizados</td><td><button class="btn" onclick="navigateTo(\'noticias\')">Ver notícias</button></td></tr></table>');
+  if(page==='usuarios'){const rows=op.users.map(u=>'<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td><span class="cell-status '+(u.status==='Ativo'?'publicado':'revisao')+'">'+u.status+'</span></td><td>'+u.date+'</td></tr>').join('');return metricCards([['Usuários cadastrados',op.users.length,'Total'],['Ativos',op.users.filter(u=>u.status==='Ativo').length,'Com acesso','var(--positive)'],['Pendentes',op.users.filter(u=>u.status==='Pendente').length,'Aguardando confirmação','var(--warning)']])+section('Cadastros recentes','<table class="data-table"><tr><th>Nome</th><th>E-mail</th><th>Status</th><th>Data</th></tr>'+rows+'</table>')}
+  if(page==='comentarios'){const pending=op.comments.filter(c=>c.status==='Pendente');const rows=op.comments.map(c=>{const ai=c.ai||moderateCommentAI(c.content);return '<tr data-comment-id="'+c.id+'"><td>'+esc(c.author)+'</td><td>'+esc(c.content)+'</td><td><span class="cell-status '+(c.status==='Aprovado'?'publicado':c.status==='Rejeitado'?'rejeitado':'revisao')+'">'+c.status+'</span></td><td><span class="status-pill '+(ai.risk==='alto'?'warning':'online')+'">IA: '+ai.label+'</span><div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">'+esc(ai.reason)+'</div></td><td><button class="btn btn-success" onclick="approveComment(\''+c.id+'\',\'Aprovado\')">Aprovar</button><button class="btn btn-danger" onclick="approveComment(\''+c.id+'\',\'Rejeitado\')">Rejeitar</button></td></tr>'}).join('');return metricCards([['Pendentes',pending.length,'Aguardando moderação','var(--warning)'],['Aprovados',op.comments.filter(c=>c.status==='Aprovado').length,'Publicados','var(--positive)'],['Alto risco IA',op.comments.filter(c=>(c.ai||moderateCommentAI(c.content)).risk==='alto').length,'Recomendados para rejeição','var(--danger)']])+section('Moderação automática por IA','<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span style="color:var(--text-secondary);font-size:12px">A IA analisa toxicidade, spam, links suspeitos e linguagem ofensiva. A decisão final permanece com o moderador.</span><button class="btn btn-primary" onclick="runAutoModeration()">✦ Analisar pendentes</button></div><table class="data-table"><tr><th>Autor</th><th>Comentário</th><th>Status</th><th>Análise da IA</th><th>Ações</th></tr>'+rows+'</table>')}
+  if(page==='monetizacao'){setTimeout(initMonetizationChart,50);return metricCards([['Receita estimada','R$ 4.280','Últimos 30 dias','var(--positive)'],['Cliques em anúncios','12.640','+18,4% no período','var(--accent)'],['CTR médio','2,84%','Desempenho dos anúncios','var(--accent)'],['Vendas','86','Conversões atribuídas','var(--positive)']])+section('Desempenho financeiro','<div style="height:300px"><canvas id="monetization-chart"></canvas></div>','<button class="btn btn-primary" onclick="exportReportCSV(\'finance\')">CSV</button><button class="btn" onclick="exportReportPDF(\'finance\')">PDF</button>')+section('Desempenho de anúncios e vendas','<table class="data-table"><tr><th>Canal</th><th>Impressões</th><th>Cliques</th><th>Conversões</th><th>Receita</th></tr><tr><td>Display</td><td>244.800</td><td>6.420</td><td>31</td><td>R$ 1.540</td></tr><tr><td>Conteúdo patrocinado</td><td>88.100</td><td>4.870</td><td>39</td><td>R$ 1.960</td></tr><tr><td>Social Ads</td><td>61.200</td><td>1.350</td><td>16</td><td>R$ 780</td></tr></table>')}
+  if(page==='marketing'){setTimeout(initMarketingChart,50);return metricCards([['Sessões','48.920','+12% vs. período anterior','var(--accent)'],['Leads','1.284','Taxa de captura: 2,6%','var(--positive)'],['Conversões','86','Taxa de conversão: 6,7%','var(--positive)'],['Campanhas ativas','4','2 precisam de atenção','var(--warning)']])+section('Tráfego e aquisição','<div style="height:300px"><canvas id="marketing-chart"></canvas></div>','<button class="btn" onclick="exportReportCSV(\'traffic\')">CSV</button><button class="btn" onclick="exportReportPDF(\'traffic\')">PDF</button>')+section('Campanhas e aquisição','<table class="data-table"><tr><th>Campanha</th><th>Canal</th><th>Status</th><th>Investimento</th><th>Conversões</th><th>ROAS</th></tr><tr><td>Conteúdo IA Q3</td><td>Orgânico</td><td><span class="cell-status publicado">Ativa</span></td><td>R$ 0</td><td>38</td><td>4,8x</td></tr><tr><td>Newsletter Tech</td><td>E-mail</td><td><span class="cell-status publicado">Ativa</span></td><td>R$ 180</td><td>24</td><td>3,2x</td></tr><tr><td>Retargeting Blog</td><td>Display</td><td><span class="cell-status revisao">Atenção</span></td><td>R$ 940</td><td>24</td><td>1,4x</td></tr></table>')}
+  if(page==='social'){const rows=op.social.map(x=>'<tr><td>'+esc(x.network)+'</td><td>'+esc(x.title)+'</td><td><span class="cell-status '+(x.status==='Publicado'?'publicado':x.status==='Agendado'?'revisao':'rascunho')+'">'+x.status+'</span></td><td>'+x.clicks+'</td><td><button class="btn" onclick="showToast(\'Publicação aberta para revisão.\',\'info\')">Revisar</button><button class="btn btn-primary" onclick="showToast(\'Editor social aberto.\',\'success\')">Editar</button></td></tr>').join('');return metricCards([['Publicações no período',18,'Todos os canais'],['Agendadas',5,'Próximos 7 dias','var(--warning)'],['Publicadas',11,'Com sucesso','var(--positive)'],['Cliques sociais',202,'Total monitorado','var(--accent)']])+section('Conteúdo para redes sociais','<table class="data-table"><tr><th>Rede</th><th>Publicação</th><th>Status</th><th>Cliques</th><th>Ações</th></tr>'+rows+'</table>','<button class="btn btn-primary" onclick="navigateTo(\'gerar\')">＋ Gerar postagem</button>')}
+  const logs=['Agente concluiu a revisão de 2 notícias','Publicação social agendada para LinkedIn','Verificação de saúde concluída sem erros','Novo cadastro recebido','Relatório de cliques atualizado'];const rows=logs.map((x,i)=>'<tr><td>Hoje, '+(10+i)+':2'+i+'</td><td><span class="cell-type artigo">AGENTE</span></td><td>'+x+'</td><td><span class="cell-status publicado">OK</span></td></tr>').join('');return section('Logs operacionais','<table class="data-table"><tr><th>Horário</th><th>Origem</th><th>Evento</th><th>Status</th></tr>'+rows+'</table>')}
+function moderateCommentAI(text){const t=(text||'').toLowerCase();const signals=[];if(/https?:\/\//.test(t)){signals.push('link externo')}if(/spam|clique aqui|ganhe dinheiro|ofensa|idiota|burro|golpe/.test(t)){signals.push('linguagem suspeita')}if((text||'').length>420){signals.push('texto muito longo')}const alto=signals.length>0;return {risk:alto?'alto':'baixo',label:alto?'Revisão recomendada':'Seguro',reason:alto?signals.join(', '):'Sem sinais relevantes'}}
+function runAutoModeration(){state.operational.comments.forEach(c=>{c.ai=moderateCommentAI(c.content);if(c.status!=='Aprovado'&&c.status!=='Rejeitado'&&c.ai.risk==='alto')c.status='Pendente'});saveState();showToast('Moderação automática concluída.','success');renderPage('comentarios')}
+function approveComment(id,status){const c=state.operational.comments.find(x=>String(x.id)===String(id));if(!c)return;c.status=status;c.moderated_at=new Date().toISOString();saveState();showToast('Comentário '+(status==='Aprovado'?'aprovado':'rejeitado')+'.','success');renderPage('comentarios')}
+function moderateComment(button,status){const row=button.closest('tr');const id=row?.dataset.commentId;if(id)approveComment(id,status)}
+function initMonetizationChart(){if(typeof Chart==='undefined'||!document.getElementById('monetization-chart'))return;new Chart(document.getElementById('monetization-chart'),{type:'line',data:{labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul'],datasets:[{label:'Receita (R$)',data:[2180,2460,2310,2940,3210,3890,4280],borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,.16)',fill:true,tension:.35},{label:'Investimento (R$)',data:[860,920,880,1010,1080,1120,1120],borderColor:'#d29922',backgroundColor:'rgba(210,153,34,.08)',fill:true,tension:.35}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#30363d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#30363d'}}}}})}
+function initMarketingChart(){if(typeof Chart==='undefined'||!document.getElementById('marketing-chart'))return;new Chart(document.getElementById('marketing-chart'),{type:'bar',data:{labels:['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],datasets:[{label:'Sessões',data:[5800,6720,7010,7480,8120,6350,7440],backgroundColor:'#58a6ff'},{label:'Conversões',data:[8,11,13,15,18,9,12],backgroundColor:'#a371f7'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'#30363d'}},y:{ticks:{color:'#8b949e'},grid:{color:'#30363d'}}}}})}
+const realtimeNotifications=[{title:'Agente de conteúdo online',body:'Geração e revisão disponíveis.',level:'success',time:'agora'},{title:'Notícia aguardando revisão',body:'Novidades do ecossistema de IA está na fila.',level:'warning',time:'agora'},{title:'Monitoramento ativo',body:'API, banco e Chart.js respondendo normalmente.',level:'success',time:'agora'}];
+function renderNotifications(){const panel=document.getElementById('notifications-panel');if(!panel)return;panel.innerHTML='<div class="notifications-head"><strong>Notificações</strong><button class="btn" onclick="markNotificationsRead()">Marcar como lidas</button></div>'+realtimeNotifications.map(n=>'<div class="notification-item"><strong>'+esc(n.title)+'</strong><span>'+esc(n.body)+' · '+esc(n.time)+'</span></div>').join('');const badge=document.getElementById('notification-count');if(badge)badge.textContent=realtimeNotifications.length}
+function toggleNotifications(){const panel=document.getElementById('notifications-panel');if(!panel)return;panel.classList.toggle('open');renderNotifications()}
+function markNotificationsRead(){realtimeNotifications.length=0;renderNotifications();const panel=document.getElementById('notifications-panel');if(panel)panel.classList.remove('open')}
+function updateAgentStatus(kind,text){const el=document.getElementById('agent-alert');const label=document.getElementById('agent-alert-text');if(!el||!label)return;el.className='agent-alert '+(kind==='warning'?'warning':kind==='error'?'error':'');label.textContent=text}
+function initRealtimeNotifications(){renderNotifications();setInterval(()=>{const pending=state.items.filter(x=>x.status==='revisao').length;realtimeNotifications.unshift({title:pending?'Fila de revisão atualizada':'Agente online',body:pending?(pending+' conteúdo(s) aguardando aprovação.'):'Todos os serviços operando normalmente.',level:pending?'warning':'success',time:'agora'});if(realtimeNotifications.length>5)realtimeNotifications.pop();updateAgentStatus(pending?'warning':'success',pending?'Agente: '+pending+' revisão(ões) pendente(s)':'Agente online');if(!document.getElementById('notifications-panel')?.classList.contains('open'))renderNotifications()},8000)}
+function reportData(type){if(type==='finance')return {title:'Relatório financeiro — DigitalTech',headers:['Canal','Impressões','Cliques','Conversões','Receita'],rows:[['Display','244800','6420','31','1540'],['Conteúdo patrocinado','88100','4870','39','1960'],['Social Ads','61200','1350','16','780']]};return {title:'Relatório de tráfego e aquisição — DigitalTech',headers:['Dia','Sessões','Conversões'],rows:[['Segunda','5800','8'],['Terça','6720','11'],['Quarta','7010','13'],['Quinta','7480','15'],['Sexta','8120','18'],['Sábado','6350','9'],['Domingo','7440','12']]}}
+function csvEscape(value){const v=String(value??'');return '"'+v.replaceAll('"','""')+'"'}
+function exportReportCSV(type){const data=reportData(type);const csv=[data.headers,...data.rows].map(row=>row.map(csvEscape).join(',')).join('\\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(type==='finance'?'relatorio-financeiro':'relatorio-trafego')+'.csv';a.click();URL.revokeObjectURL(url);showToast('Relatório CSV exportado.','success')}
+function exportReportPDF(type){const data=reportData(type);if(!window.jspdf?.jsPDF){window.print();showToast('Use a opção Salvar como PDF do navegador.','info');return}const doc=new window.jspdf.jsPDF();doc.setFontSize(16);doc.text(data.title,14,18);doc.setFontSize(10);let y=30;doc.text(data.headers.join(' | '),14,y);y+=8;data.rows.forEach(row=>{doc.text(row.join(' | '),14,y);y+=7});doc.save((type==='finance'?'relatorio-financeiro':'relatorio-trafego')+'.pdf');showToast('Relatório PDF exportado.','success')}
+function updateLivePublicationPreview(){const root=document.getElementById('live-publication-preview');if(!root)return;const get=id=>document.getElementById(id);const title=get('form-titulo')?.value.trim()||'Título do conteúdo';const summary=get('form-resumo')?.value.trim()||'O resumo aparecerá aqui enquanto você preenche o formulário.';const content=get('form-conteudo')?.value.trim()||'O conteúdo em Markdown aparecerá aqui.';const category=get('form-categoria')?.value||'Sem categoria';const status=get('form-status')?.value||'rascunho';const type=state.editingType==='notícia'?'NOTÍCIA':'ARTIGO';const tags=(get('form-tags')?.value||'').split(',').map(x=>x.trim()).filter(Boolean);get('live-preview-title').textContent=title;get('live-preview-summary').textContent=summary;get('live-preview-meta').textContent=type+' · '+status.toUpperCase()+' · '+category;get('live-preview-content').innerHTML=markdownToHtml(content);get('live-preview-tags').innerHTML=tags.map(t=>'<span class="tag-chip">#'+esc(t)+'</span>').join('');const image=get('form-featured-url')?.value.trim()||'';const wrap=get('live-preview-image-wrap'),img=get('live-preview-image');if(image){img.src=image;wrap.style.display='block'}else{img.removeAttribute('src');wrap.style.display='none'}const seoTitle=get('seo-title')?.value.trim()||title;const seoDescription=get('seo-description')?.value.trim()||summary;const slug=get('form-slug')?.value.trim()||slugify(title);get('live-preview-seo-title').textContent=seoTitle;get('live-preview-seo-description').textContent=seoDescription;get('live-preview-seo-url').textContent='digitaltech.local/'+slug}
+function initLivePreviewBindings(){const area=document.getElementById('content-area');if(!area||area.dataset.livePreviewBound)return;area.dataset.livePreviewBound='1';area.addEventListener('input',e=>{if(e.target.closest('.form-group,.editor-split,.seo-section')){updateLivePublicationPreview()}});area.addEventListener('change',e=>{if(e.target.closest('.form-group,.editor-split,.seo-section')){updateLivePublicationPreview()}})}
+function renderGenerate(){return `
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Gerar Artigo</div>
   </div>
+  <div class="section-body">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label class="form-label" for="artigo-tema">Tema do artigo</label>
+        <input type="text" class="form-input" id="artigo-tema" placeholder="Ex: Inteligência Artificial na Educação">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="artigo-categoria">Categoria</label>
+        <select class="form-select" id="artigo-categoria">
+          <option value="Inteligência Artificial">Inteligência Artificial</option>
+          ${state.categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="artigo-tom">Tom de escrita</label>
+        <select class="form-select" id="artigo-tom">
+          <option value="Técnico">Técnico</option>
+          <option value="Divulgativo">Divulgativo</option>
+          <option value="Tutorial">Tutorial</option>
+          <option value="Opinião">Opinião</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="artigo-tamanho">Tamanho estimado</label>
+        <select class="form-select" id="artigo-tamanho">
+          <option value="Curto (~500 palavras)">Curto (~500 palavras)</option>
+          <option value="Médio (~1000 palavras)" selected>Médio (~1000 palavras)</option>
+          <option value="Longo (~2000 palavras)">Longo (~2000 palavras)</option>
+        </select>
+      </div>
+    </div>
+    <div class="checkbox-row" style="margin-top: 14px;">
+      <input type="checkbox" id="artigo-publicar" checked>
+      <label for="artigo-publicar">Publicar imediatamente no GitHub</label>
+    </div>
+    <div style="margin-top: 16px;">
+      <button class="btn btn-primary" id="btn-gerar-artigo" onclick="gerarArtigo()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Gerar Artigo
+      </button>
+    </div>
+    <div id="ai-artigo-output" style="margin-top:16px"></div>
+  </div>
+</div>
 
-  <div class="toast" id="toast"></div>
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">Gerar Notícia</div>
+  </div>
+  <div class="section-body">
+    <div class="form-grid">
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label class="form-label" for="noticia-tema">Tema ou fonte da notícia</label>
+        <input type="text" class="form-input" id="noticia-tema" placeholder="Ex: Lançamento do novo modelo GPT-5">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="noticia-categoria">Categoria</label>
+        <select class="form-select" id="noticia-categoria">
+          ${state.categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="checkbox-row" style="margin-top: 14px;">
+      <input type="checkbox" id="noticia-publicar" checked>
+      <label for="noticia-publicar">Publicar imediatamente no GitHub</label>
+    </div>
+    <div style="margin-top: 16px;">
+      <button class="btn btn-primary" id="btn-gerar-noticia" onclick="gerarNoticia()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Gerar Notícia
+      </button>
+    </div>
+    <div id="ai-noticia-output" style="margin-top:16px"></div>
+  </div>
+</div>
 
-  <script>
-    // ============================================================
-    // CONFIGURAÇÃO — AJUSTE AQUI QUANDO HOSPEDAR
-    // ============================================================
-    // Local:
-    const API_BASE = window.location.origin + "/api";
-    // Produção (descomente e ajuste):
-    // const API_BASE = "https://digitaltech.seudominio.com/api";
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Gerar notícia com IA (Simulação original)</span>
+    <span class="status-pill online">Simulação local</span>
+  </div>
+  <div class="section-body">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Tema da notícia</label><input class="form-input" id="ai-news-topic" placeholder="Ex.: novas tendências de segurança em APIs"></div>
+      <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="ai-news-category">${state.categories.map(c=>'<option>'+esc(c)+'</option>').join('')}</select></div>
+      <div class="form-group"><label class="form-label">Tom</label><select class="form-select" id="ai-news-tone"><option>Informativo</option><option>Analítico</option><option>Descontraído</option><option>Urgente</option></select></div>
+      <div class="form-group"><label class="form-label">Tamanho</label><select class="form-select" id="ai-news-length"><option>Curto</option><option selected>Médio</option><option>Longo</option></select></div>
+    </div>
+    <div style="margin-top:16px"><button class="btn btn-primary" onclick="generateNewsAI()">✦ Gerar notícia</button></div>
+    <div id="ai-news-output" style="margin-top:16px"></div>
+  </div>
+</div>
 
-    let selectedModel = "llama3.1:70b";
-    let selectedModelName = "Llama 3.1 70B";
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Gerar postagem para redes sociais</span>
+    <span class="status-pill online">Simulação local</span>
+  </div>
+  <div class="section-body">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Assunto</label><input class="form-input" id="ai-social-topic" placeholder="Ex.: divulgar o novo artigo de IA"></div>
+      <div class="form-group"><label class="form-label">Rede</label><select class="form-select" id="ai-social-network"><option>LinkedIn</option><option>Instagram</option><option>X / Twitter</option><option>Facebook</option></select></div>
+      <div class="form-group full-width"><label class="form-label">Contexto adicional</label><textarea class="form-textarea" id="ai-social-context" placeholder="Link, chamada, público ou mensagem obrigatória"></textarea></div>
+    </div>
+    <div style="margin-top:16px"><button class="btn btn-primary" onclick="generateSocialAI()">✦ Gerar postagem</button></div>
+    <div id="ai-social-output" style="margin-top:16px"></div>
+  </div>
+</div>
+`;}
+function gerarArtigo(){const tema=document.getElementById('artigo-tema').value.trim()||'Tecnologia e Inovação';const categoria=document.getElementById('artigo-categoria').value;const tom=document.getElementById('artigo-tom').value;const tamanho=document.getElementById('artigo-tamanho').value;const publicar=document.getElementById('artigo-publicar').checked;const content='# '+tema+'\n\nEste artigo aborda '+tema+' com uma linguagem '+tom.toLowerCase()+', pensada para leitores que buscam profundidade e clareza sobre o assunto.\n\n## Contexto\n\nO tema tem ganhado relevância dentro do cenário de '+categoria+', trazendo novas oportunidades e desafios para profissionais da área.\n\n## Principais pontos\n\nEspecialistas destacam boas práticas, ferramentas e tendências que ajudam a entender melhor o assunto e aplicá-lo no dia a dia.\n\n## Conclusão\n\nAcompanhar as evoluções de '+tema+' é essencial para se manter atualizado e competitivo.\n\n*Conteúdo gerado automaticamente pelo agente DigitalTech ('+tamanho+') para revisão editorial.*';document.getElementById('ai-artigo-output').innerHTML='<div class="seo-section"><div class="seo-section-title">Rascunho gerado — '+esc(tom)+' · '+esc(categoria)+'</div><div class="editor-preview">'+markdownToHtml(content)+'</div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-success" onclick="salvarArtigoGerado()">'+(publicar?'Publicar agora':'Salvar em revisão')+'</button><button class="btn" onclick="document.getElementById(\'ai-artigo-output\').innerHTML=\'\'">Descartar</button></div></div>';state.generatedArtigo={titulo:tema,resumo:'Artigo gerado automaticamente sobre '+tema+', pronto para revisão editorial.',categoria,conteudo:content,tags:['ia','artigo'],publicar};showToast('Artigo gerado com sucesso.','success')}
+function salvarArtigoGerado(){if(!state.generatedArtigo)return;const g=state.generatedArtigo;const status=g.publicar?'publicado':'revisao';state.items.push({id:Date.now(),tipo:'artigo',status,slug:slugify(g.titulo),imagem_destaque:'',imagens_internas:[],seo:{titulo:g.titulo,descricao:g.resumo,keyword:g.titulo},titulo:g.titulo,resumo:g.resumo,categoria:g.categoria,tags:g.tags,conteudo:g.conteudo,created_at:new Date().toISOString()});saveState();showToast(g.publicar?'Artigo publicado com sucesso.':'Artigo salvo na fila de revisão.','success');state.generatedArtigo=null;navigateTo('artigos')}
+function gerarNoticia(){const tema=document.getElementById('noticia-tema').value.trim()||'Novidades do setor de tecnologia';const categoria=document.getElementById('noticia-categoria').value;const publicar=document.getElementById('noticia-publicar').checked;const content='## '+tema+'\n\nConfira as últimas atualizações sobre '+tema+', com impacto direto no mercado de '+categoria+'.\n\n### Destaques\n\nAs novidades trazem mudanças relevantes para empresas e profissionais que acompanham o setor de perto.\n\n*Notícia gerada automaticamente pelo agente DigitalTech para revisão editorial.*';document.getElementById('ai-noticia-output').innerHTML='<div class="seo-section"><div class="seo-section-title">Rascunho gerado — '+esc(categoria)+'</div><div class="editor-preview">'+markdownToHtml(content)+'</div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-success" onclick="salvarNoticiaGerada()">'+(publicar?'Publicar agora':'Salvar em revisão')+'</button><button class="btn" onclick="document.getElementById(\'ai-noticia-output\').innerHTML=\'\'">Descartar</button></div></div>';state.generatedNoticia={titulo:tema,resumo:'Notícia gerada automaticamente sobre '+tema+', pronta para revisão editorial.',categoria,conteudo:content,tags:['ia','noticia'],publicar};showToast('Notícia gerada com sucesso.','success')}
+function salvarNoticiaGerada(){if(!state.generatedNoticia)return;const g=state.generatedNoticia;const status=g.publicar?'publicado':'revisao';state.items.push({id:Date.now(),tipo:'noticia',status,slug:slugify(g.titulo),imagem_destaque:'',imagens_internas:[],seo:{titulo:g.titulo,descricao:g.resumo,keyword:g.titulo},titulo:g.titulo,resumo:g.resumo,categoria:g.categoria,tags:g.tags,conteudo:g.conteudo,created_at:new Date().toISOString()});saveState();showToast(g.publicar?'Notícia publicada com sucesso.':'Notícia salva na fila de revisão.','success');state.generatedNoticia=null;navigateTo('noticias')}
+function generateNewsAI(){const topic=document.getElementById('ai-news-topic').value.trim()||'tendências de tecnologia';const category=document.getElementById('ai-news-category').value;const tone=document.getElementById('ai-news-tone').value;const content='# '+topic+'\n\nO cenário de '+topic+' está evoluindo rapidamente e já influencia decisões de produto, segurança e estratégia.\n\n## O que mudou\n\nEspecialistas observam novas práticas e ferramentas que ajudam equipes a trabalhar com mais eficiência.\n\n## Por que isso importa\n\nA adoção responsável permite reduzir riscos, melhorar resultados e preparar o negócio para os próximos desafios.\n\n*Conteúdo gerado em simulação local para revisão editorial.*';document.getElementById('ai-news-output').innerHTML='<div class="seo-section"><div class="seo-section-title">Rascunho gerado — '+esc(tone)+' · '+esc(category)+'</div><div class="editor-preview">'+markdownToHtml(content)+'</div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-success" onclick="saveGeneratedNews()">Salvar em revisão</button><button class="btn" onclick="document.getElementById(\'ai-news-output\').innerHTML=\'\'">Descartar</button></div></div>';state.generatedNews={titulo:topic,resumo:'Notícia gerada para revisão editorial.',categoria:category,conteudo:content,tags:['ia','notícias']};showToast('Notícia gerada para revisão.','success')}
+function saveGeneratedNews(){if(!state.generatedNews)return;state.items.push({id:Date.now(),tipo:'noticia',status:'revisao',slug:slugify(state.generatedNews.titulo),imagem_destaque:'',imagens_internas:[],seo:{titulo:state.generatedNews.titulo,descricao:state.generatedNews.resumo,keyword:state.generatedNews.titulo},...state.generatedNews});saveState();showToast('Notícia salva na fila de revisão.','success');navigateTo('noticias')}
+function generateSocialAI(){const topic=document.getElementById('ai-social-topic').value.trim()||'novidades do blog';const network=document.getElementById('ai-social-network').value;const context=document.getElementById('ai-social-context').value.trim();const copy=network==='X / Twitter'?('Novidade: '+topic+'. Confira os principais pontos e acompanhe o DigitalTech.'):('Confira: '+topic+'. Insights práticos, contexto e próximos passos para você acompanhar a evolução. '+context);document.getElementById('ai-social-output').innerHTML='<div class="seo-section"><div class="seo-section-title">Postagem gerada para '+esc(network)+'</div><textarea class="form-textarea" id="ai-social-copy">'+esc(copy)+'</textarea><div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-success" onclick="saveGeneratedSocial()">Salvar para revisão</button><button class="btn" onclick="document.getElementById(\'ai-social-output\').innerHTML=\'\'">Descartar</button></div></div>';state.generatedSocial={network,title:topic,copy,status:'Rascunho',clicks:0};showToast('Postagem social gerada.','success')}
+function saveGeneratedSocial(){if(!state.generatedSocial)return;state.generatedSocial.copy=document.getElementById('ai-social-copy').value;state.operational.social.unshift(state.generatedSocial);saveState();showToast('Postagem salva para revisão social.','success');navigateTo('social')}
+function renderForm(type,data={}){state.activeForm=type;const isNews=type==='notícia';const p=state.editingId?state.items.find(x=>x.id===state.editingId)||{}:{};const d={...p,...data,seo:{...(p.seo||{}),...(data.seo||{})},imagens_internas:p.imagens_internas||[]};return '<div class="section"><div class="section-header"><span class="section-title">'+(state.editingId?'Editar ':'Novo ')+(isNews?'Notícia':'Artigo')+'</span><button class="btn" onclick="navigateTo(\''+(isNews?'noticias':'artigos')+'\')">Cancelar</button></div><div class="section-body"><div class="form-grid"><div class="form-group full-width"><label class="form-label">Título <span class="required">*</span></label><input class="form-input" id="form-titulo" value="'+esc(d.titulo||'')+'" oninput="syncSlug()"></div><div class="form-group"><label class="form-label">Categoria</label><select class="form-select" id="form-categoria">'+state.categories.map(c=>'<option '+(d.categoria===c?'selected':'')+'>'+esc(c)+'</option>').join('')+'</select></div><div class="form-group"><label class="form-label">Tags</label><div class="tag-editor"><input id="form-tags" list="tag-options" placeholder="Digite uma tag e pressione Enter" value="'+(d.tags||[]).join(', ')+'" onkeydown="if(event.key=\'Enter\'){event.preventDefault();this.value+=\', \'}"></div><datalist id="tag-options">'+state.tags.map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist><span class="form-hint">Separe as tags por vírgula.</span></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="form-status"><option value="rascunho">rascunho</option><option value="revisao">revisao</option><option value="publicado">publicado</option></select></div><div class="form-group full-width"><label class="form-label">Resumo <span class="required">*</span></label><input class="form-input" id="form-resumo" value="'+esc(d.resumo||'')+'"></div><div class="form-group"><label class="form-label">Slug</label><input class="form-input" id="form-slug" value="'+esc(d.slug||'')+'"></div><div class="form-group"><label class="form-label">Autor</label><input class="form-input" id="form-autor" value="'+esc(d.autor||'Agente DigitalTech')+'"></div><div class="form-group full-width"><label class="form-label">Imagem de destaque / Featured Image</label><input type="url" class="form-input" id="form-featured-url" value="'+esc(d.imagem_destaque||'')+'" oninput="previewFeatured()"><input type="file" accept="image/*" style="margin-top:8px" onchange="readFeatured(event)"><div class="image-preview-box"><span class="img-placeholder" id="featured-placeholder">Nenhuma imagem de destaque selecionada</span><img id="featured-preview" src="'+esc(d.imagem_destaque||'')+'" style="'+(d.imagem_destaque?'display:block':'display:none')+'"></div></div><div class="form-group full-width"><label class="form-label">Conteúdo em Markdown <span class="required">*</span></label><div class="editor-split"><div class="editor-pane"><div class="editor-pane-header">Editor Markdown</div><div class="editor-toolbar"><button class="toolbar-btn" onclick="insertMarkdown(\'**\',\'**\')">B</button><button class="toolbar-btn" onclick="insertMarkdown(\'*\',\'*\')">I</button><button class="toolbar-btn" onclick="insertMarkdown(\'## \',\'\')">H2</button><button class="toolbar-btn" onclick="insertInternalImage()">＋ Imagem</button></div><textarea class="editor-textarea" id="form-conteudo" oninput="updatePreview()">'+esc(d.conteudo||'')+'</textarea></div><div class="editor-pane"><div class="editor-pane-header">Pré-visualização</div><div class="editor-preview" id="form-preview">'+markdownToHtml(d.conteudo||'')+'</div></div></div></div><div class="form-group full-width"><label class="form-label">Imagens dentro do conteúdo</label><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="form-input" id="internal-url" placeholder="URL da imagem interna"><input class="form-input" id="internal-alt" placeholder="Texto alternativo (alt)"><button class="btn" onclick="addInternalImage()">Adicionar imagem</button></div><div class="image-list" id="internal-list">'+renderInternalImages(d.imagens_internas)+'</div></div></div><div class="seo-section"><div class="seo-section-title">Controles de SEO <button class="btn" onclick="generateSEO()">Preencher SEO</button> <button class="btn" onclick="clearSEO()">Limpar</button></div><div class="seo-grid"><div class="form-group"><label class="form-label">Título SEO / Meta Title</label><input class="form-input" id="seo-title" value="'+esc(d.seo.titulo||'')+'" oninput="updateSEOPreview()"></div><div class="form-group"><label class="form-label">Palavra-chave principal</label><input class="form-input" id="seo-keyword" value="'+esc(d.seo.keyword||'')+'"></div><div class="form-group full-width"><label class="form-label">Meta Description</label><textarea class="form-textarea" id="seo-description" oninput="updateSEOPreview()">'+esc(d.seo.descricao||'')+'</textarea></div><div class="form-group"><label class="form-label">URL canônica</label><input class="form-input" id="seo-canonical" value="'+esc(d.seo.canonical||'')+'"></div><div class="form-group"><label class="form-label">Robots</label><select class="form-select" id="seo-robots"><option value="index,follow">index, follow</option><option value="noindex,nofollow">noindex, nofollow</option></select></div></div><div class="og-card"><div class="og-card-body"><div class="og-card-title" id="seo-preview-title">'+esc(d.seo.titulo||d.titulo||'Título SEO')+'</div><div class="og-card-desc" id="seo-preview-desc">'+esc(d.seo.descricao||d.resumo||'Descrição SEO')+'</div><div class="og-card-url" id="seo-preview-url">digitaltech.local/'+esc(d.slug||'slug')+'</div></div></div></div><div class="seo-section live-publication-preview"><div class="seo-section-title">Pré-visualização antes da publicação <span class="status-pill online">Atualização em tempo real</span></div><div id="live-publication-preview" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;overflow:hidden"><div id="live-preview-image-wrap" style="display:none"><img id="live-preview-image" style="width:100%;max-height:260px;object-fit:cover" alt="Imagem de destaque da prévia"></div><div style="padding:18px 20px"><div id="live-preview-meta" style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">ARTIGO · RASCUNHO</div><h1 id="live-preview-title" style="font-size:25px;line-height:1.25;margin-bottom:8px">Título do conteúdo</h1><p id="live-preview-summary" style="color:var(--text-secondary);font-size:14px;margin-bottom:14px">O resumo aparecerá aqui enquanto você preenche o formulário.</p><div id="live-preview-tags" class="tag-list" style="margin-bottom:14px"></div><div id="live-preview-content" class="editor-preview" style="padding:0;min-height:70px">O conteúdo em Markdown aparecerá aqui.</div><div style="border-top:1px solid var(--border-color);margin-top:16px;padding-top:12px;font-size:12px;color:var(--text-tertiary)"><b>SEO:</b> <span id="live-preview-seo-title">Título SEO</span><br><span id="live-preview-seo-description">Descrição SEO</span><br><span id="live-preview-seo-url">digitaltech.local/slug</span></div></div></div></div><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px"><button class="btn" onclick="saveContent(false)">Salvar rascunho</button><button class="btn" onclick="saveContent(true,\'revisao\')">Enviar para revisão</button><button class="btn btn-primary" onclick="saveContent(true,\'publicado\')">Publicar agora</button></div></div></div>'}
+function openCreate(type){state.editingId=null;state.editingType=type;document.getElementById('page-title').textContent=type==='notícia'?'Nova Notícia':'Novo Artigo';document.getElementById('content-area').innerHTML=renderForm(type);updatePreview();updateLivePublicationPreview();updateCounts()}
+function editItem(id){const x=state.items.find(i=>i.id===id);if(!x)return;state.editingId=id;state.editingType=x.tipo;document.getElementById('content-area').innerHTML=renderForm(x.tipo);updatePreview();updateLivePublicationPreview()}function collectForm(statusOverride){const title=document.getElementById('form-titulo').value.trim();const slug=document.getElementById('form-slug').value.trim()||slugify(title);return {titulo:title,resumo:document.getElementById('form-resumo').value.trim(),categoria:document.getElementById('form-categoria').value,tags:(document.getElementById('form-tags')?.value||'').split(',').map(t=>t.trim().toLowerCase()).filter(Boolean),status:statusOverride||document.getElementById('form-status').value,slug,autor:document.getElementById('form-autor').value.trim(),conteudo:document.getElementById('form-conteudo').value,imagem_destaque:document.getElementById('form-featured-url').value.trim(),imagens_internas:getInternalImages(),seo:{titulo:document.getElementById('seo-title').value.trim(),descricao:document.getElementById('seo-description').value.trim(),keyword:document.getElementById('seo-keyword').value.trim(),canonical:document.getElementById('seo-canonical').value.trim(),robots:document.getElementById('seo-robots').value}}}function saveContent(publish,status){const d=collectForm(status);state.categories=Array.from(new Set([...state.categories,d.categoria].filter(Boolean)));state.tags=Array.from(new Set([...state.tags,...(d.tags||[])].filter(Boolean)));if(d.titulo.length<5)return showToast('O título precisa ter pelo menos 5 caracteres.','error');if(!d.resumo)return showToast('O resumo é obrigatório.','error');if(d.conteudo.length<30)return showToast('O conteúdo precisa ter pelo menos 30 caracteres.','error');if(state.editingId){Object.assign(state.items.find(x=>x.id===state.editingId),d)}else{state.items.push({id:Date.now(),tipo:state.editingType||'artigo',...d,created_at:new Date().toISOString()})}saveState();showToast(publish?(status==='publicado'?'Conteúdo publicado com sucesso.':'Enviado para revisão.'):'Rascunho salvo com sucesso.','success');state.editingId=null;navigateTo(d.tipo==='notícia'?'noticias':'artigos')}
+function syncSlug(){const s=document.getElementById('form-slug'),t=document.getElementById('form-titulo');if(s&&!s.dataset.manual)s.value=slugify(t.value);updateSEOPreview()}function previewFeatured(){const url=document.getElementById('form-featured-url').value;const img=document.getElementById('featured-preview');img.src=url;img.style.display=url?'block':'none';document.getElementById('featured-placeholder').style.display=url?'none':'block';const seo=document.getElementById('seo-image');if(seo){seo.src=url;seo.style.display=url?'block':'none'}}function readFeatured(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{document.getElementById('form-featured-url').value=r.result;previewFeatured()};r.readAsDataURL(f)}
+function getInternalImages(){return [...document.querySelectorAll('#internal-list .image-item')].map(e=>JSON.parse(e.dataset.item))}function renderInternalImages(a=[]){return a.map((x,i)=>`<div class="image-item" data-item='${esc(JSON.stringify(x))}'><img src="${esc(x.url)}" alt="${esc(x.alt)}"><div class="meta"><b>${esc(x.alt||'Imagem interna')}</b><br><span style="color:var(--text-tertiary)">${esc(x.url.slice(0,70))}</span></div><button class="btn btn-danger" onclick="this.parentElement.remove()">Remover</button></div>`).join('')}function addInternalImage(){const url=document.getElementById('internal-url').value.trim(),alt=document.getElementById('internal-alt').value.trim();if(!url)return showToast('Informe a URL da imagem interna.','error');const list=document.getElementById('internal-list');list.insertAdjacentHTML('beforeend',renderInternalImages([{url,alt}]));document.getElementById('internal-url').value='';document.getElementById('internal-alt').value='';showToast('Imagem interna adicionada.','success')}function insertInternalImage(){const url=document.getElementById('internal-url')?.value.trim();if(!url)return showToast('Informe uma URL no bloco de imagens internas antes de inserir.','warning');insertMarkdown(`![${document.getElementById('internal-alt')?.value.trim()||'Imagem'}](${url})`,'');updatePreview()}function generateSEO(){const t=document.getElementById('form-titulo').value.trim(),r=document.getElementById('form-resumo').value.trim();document.getElementById('seo-title').value=t.slice(0,60);document.getElementById('seo-description').value=r.slice(0,160);document.getElementById('seo-keyword').value=t.split(' ').slice(0,3).join(' ');updateSEOPreview();showToast('Campos de SEO preenchidos.','success')}function clearSEO(){['seo-title','seo-description','seo-keyword','seo-canonical'].forEach(id=>document.getElementById(id).value='');updateSEOPreview()}function updateSEOPreview(){const t=document.getElementById('seo-title'),d=document.getElementById('seo-description'),s=document.getElementById('form-slug');if(t)document.getElementById('seo-preview-title').textContent=t.value||document.getElementById('form-titulo').value||'Título SEO';if(d)document.getElementById('seo-preview-desc').textContent=d.value||document.getElementById('form-resumo').value||'Descrição SEO';if(s)document.getElementById('seo-preview-url').textContent='digitaltech.local/'+(s.value||'slug')}
+function openTaxonomyManager(){openModal('Gerenciar categorias e tags',`<div class="form-grid"><div class="form-group"><label class="form-label">Nova categoria</label><div style="display:flex;gap:8px"><input class="form-input" id="new-category" placeholder="Ex.: Cloud"><button class="btn btn-primary" onclick="addCategory()">Adicionar</button></div><div class="tag-list" id="category-manager-list">${state.categories.map(c=>`<span class="tag-chip">${esc(c)} <button class="toolbar-btn" onclick="removeCategory('${esc(c)}')">×</button></span>`).join('')}</div></div><div class="form-group"><label class="form-label">Nova tag</label><div style="display:flex;gap:8px"><input class="form-input" id="new-tag" placeholder="Ex.: cloud"><button class="btn btn-primary" onclick="addTag()">Adicionar</button></div><div class="tag-list" id="tag-manager-list">${state.tags.map(t=>`<span class="tag-chip">${esc(t)} <button class="toolbar-btn" onclick="removeTag('${esc(t)}')">×</button></span>`).join('')}</div></div></div>`,`<button class="btn btn-primary" onclick="closeModal();renderPage(state.currentPage)">Concluir</button>`)}function addCategory(){const v=document.getElementById('new-category').value.trim();if(!v||state.categories.includes(v))return showToast('Categoria vazia ou já existente.','warning');state.categories.push(v);saveState();openTaxonomyManager()}function addTag(){const v=document.getElementById('new-tag').value.trim().toLowerCase();if(!v||state.tags.includes(v))return showToast('Tag vazia ou já existente.','warning');state.tags.push(v);saveState();openTaxonomyManager()}function removeCategory(v){if(state.items.some(x=>x.categoria===v))return showToast('Não é possível remover uma categoria em uso.','warning');state.categories=state.categories.filter(x=>x!==v);saveState();openTaxonomyManager()}function removeTag(v){if(state.items.some(x=>(x.tags||[]).includes(v)))return showToast('Não é possível remover uma tag em uso.','warning');state.tags=state.tags.filter(x=>x!==v);saveState();openTaxonomyManager()}
+function viewItem(id){const x=state.items.find(i=>i.id===id);if(!x)return;openModal(x.titulo,`<div class="article-viewer"><div style="color:var(--text-tertiary);font-size:12px;margin-bottom:14px">${x.tipo} · ${x.status} · ${esc(x.categoria||'')} · ${(x.tags||[]).map(t=>'#'+esc(t)).join(' ')}</div>${x.imagem_destaque?`<img src="${esc(x.imagem_destaque)}" style="width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:16px">`:''}<h2 style="margin-bottom:8px">${esc(x.titulo)}</h2><p style="color:var(--text-secondary);margin-bottom:20px">${esc(x.resumo)}</p><div class="editor-preview">${markdownToHtml(x.conteudo)}</div><div class="seo-section"><div class="seo-section-title">SEO configurado</div><p><b>Meta title:</b> ${esc(x.seo?.titulo||'—')}</p><p><b>Meta description:</b> ${esc(x.seo?.descricao||'—')}</p><p><b>Focus keyword:</b> ${esc(x.seo?.keyword||'—')}</p></div></div>`,`<button class="btn" onclick="closeModal();editItem(${x.id})">Editar</button><button class="btn btn-primary" onclick="closeModal()">Fechar</button>`)}function deleteItem(id){if(!confirm('Excluir este conteúdo?'))return;state.items=state.items.filter(x=>x.id!==id);saveState();showToast('Conteúdo excluído.','success');renderPage(state.currentPage)}function refreshData(){showToast('Dados atualizados.','success');renderPage(state.currentPage)}
+renderPage('dashboard');initLivePreviewBindings();initRealtimeNotifications();
+function renderHubAtalhosModule(){
+  return `
+    <div class="section">
+      <div class="section-header"><span class="section-title">Hub de Navegação & Atalhos</span></div>
+      <div class="section-body">
+        <p style="margin-bottom: 16px; color: var(--text-secondary);">Acesse rapidamente todos os módulos integrados e plataformas externas do ecossistema DigitalTech.</p>
+        <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+          <div class="card">
+            <div class="card-title">Ferramentas Google</div>
+            <div class="card-value" style="font-size:20px; color:var(--accent)">12.640</div>
+            <div class="card-meta">Cliques • CTR 2.84%</div>
+            <button class="btn btn-primary" style="margin: 12px 0; width: 100%; justify-content: center;" onclick="navigateTo('google-tools')">Ver Módulo Google →</button>
+            <div class="tag-list">
+              <a href="https://analytics.google.com" target="_blank" class="tag-chip" style="text-decoration:none">Analytics ↗</a>
+              <a href="https://search.google.com/search-console" target="_blank" class="tag-chip" style="text-decoration:none">Search Console ↗</a>
+              <a href="https://ads.google.com" target="_blank" class="tag-chip" style="text-decoration:none">Google Ads ↗</a>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Hub de Afiliados</div>
+            <div class="card-value" style="font-size:20px; color:var(--positive)">R$ 4.280</div>
+            <div class="card-meta">Vendas e Comissões</div>
+            <button class="btn btn-primary" style="margin: 12px 0; width: 100%; justify-content: center;" onclick="navigateTo('afiliados')">Ver Vendas & Afiliados →</button>
+            <div class="tag-list">
+              <a href="https://hotmart.com" target="_blank" class="tag-chip" style="text-decoration:none">Hotmart ↗</a>
+              <a href="https://shopee.com.br" target="_blank" class="tag-chip" style="text-decoration:none">Shopee ↗</a>
+              <a href="https://amazon.com.br" target="_blank" class="tag-chip" style="text-decoration:none">Amazon ↗</a>
+              <a href="https://mercadolivre.com.br" target="_blank" class="tag-chip" style="text-decoration:none">Mercado Livre ↗</a>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Financeiro & Agente</div>
+            <div class="card-value" style="font-size:20px; color:var(--info)">ROI 315%</div>
+            <div class="card-meta">Lucro Líquido & Status</div>
+            <button class="btn btn-primary" style="margin: 12px 0; width: 100%; justify-content: center;" onclick="navigateTo('financeiro-agente')">Ver Fluxo Financeiro →</button>
+            <div class="tag-list">
+              <a href="#" target="_blank" class="tag-chip" style="text-decoration:none">Banco/Gateway ↗</a>
+              <a href="#" target="_blank" class="tag-chip" style="text-decoration:none">Servidor/Hospedagem ↗</a>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Redes Sociais</div>
+            <div class="card-value" style="font-size:20px; color:var(--warning)">32.4k</div>
+            <div class="card-meta">Alcance • 5 Agendados</div>
+            <button class="btn btn-primary" style="margin: 12px 0; width: 100%; justify-content: center;" onclick="navigateTo('redes-sociais')">Gerenciar Redes →</button>
+            <div class="tag-list">
+              <a href="https://business.facebook.com" target="_blank" class="tag-chip" style="text-decoration:none">Meta Business ↗</a>
+              <a href="https://studio.youtube.com" target="_blank" class="tag-chip" style="text-decoration:none">YouTube Studio ↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
-    // ============================================================
-    // UTILITÁRIOS
-    // ============================================================
-    function showToast(message, type = "success") {
-      const toast = document.getElementById("toast");
-      toast.textContent = message;
-      toast.className = `toast ${type} show`;
-      setTimeout(() => toast.classList.remove("show"), 3500);
-    }
+function renderFinanceiroModule(){
+  return `
+    <div class="filters-bar">
+      <span style="font-weight:600">Período:</span>
+      <select class="form-select"><option selected>Agosto 2026</option><option>Últimos 3 meses</option><option>Ano de 2026</option></select>
+      <button class="btn btn-primary" onclick="showToast('Relatório financeiro exportado com sucesso!','success')">📥 Exportar Relatório PDF</button>
+      <button class="btn" onclick="showToast('Gateway sincronizado!','info')">↻ Sincronizar Gateway</button>
+    </div>
+    <div class="cards-grid">
+      <div class="card"><div class="card-title">Receita Bruta</div><div class="card-value" style="color:var(--positive)">R$ 14.850</div><div class="card-meta">+18.4% vs mês anterior</div></div>
+      <div class="card"><div class="card-title">Custos Operacionais</div><div class="card-value" style="color:var(--danger)">R$ 3.570</div><div class="card-meta">APIs, Servidores & LLMs</div></div>
+      <div class="card"><div class="card-title">Lucro Líquido</div><div class="card-value" style="color:var(--accent)">R$ 11.280</div><div class="card-meta">Margem de 75.9%</div></div>
+      <div class="card"><div class="card-title">Status do Agente</div><div class="card-value" style="font-size:18px;color:var(--positive)">Operando 100%</div><div class="card-meta">Sem falhas de execução</div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Fluxo de Caixa & Projeção de Lucro</span></div>
+      <div class="section-body">
+        <div style="height:260px"><canvas id="financeChartDetailed"></canvas></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Últimas Transações Registradas</span></div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead><tr><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Data</th></tr></thead>
+          <tbody>
+            <tr><td><div class="cell-title">Comissão Afiliado Hotmart</div></td><td>Vendas</td><td><b style="color:var(--positive)">+ R$ 1.250,00</b></td><td><span class="cell-status publicado">Concluído</span></td><td>Hoje, 14:20</td></tr>
+            <tr><td><div class="cell-title">AdSense Blog Revenue</div></td><td>Monetização</td><td><b style="color:var(--positive)">+ R$ 3.420,00</b></td><td><span class="cell-status publicado">Recebido</span></td><td>Ontem</td></tr>
+            <tr><td><div class="cell-title">OpenAI API & Claude Credits</div></td><td>Infraestrutura</td><td><b style="color:var(--danger)">- R$ 850,00</b></td><td><span class="cell-status revisao">Debitado</span></td><td>14/08/2026</td></tr>
+            <tr><td><div class="cell-title">Servidor Cloud & Domínio</div></td><td>Hospedagem</td><td><b style="color:var(--danger)">- R$ 220,00</b></td><td><span class="cell-status publicado">Pago</span></td><td>10/08/2026</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
-    function addLog(level, message) {
-      const container = document.getElementById("log-container");
-      const now = new Date();
-      const time = now.toTimeString().split(" ")[0];
-      const colors = { info: "log-info", success: "log-success", error: "log-error", warn: "log-warn" };
-      const entry = document.createElement("div");
-      entry.className = "log-entry";
-      entry.innerHTML = `<span class="log-time">[${time}]</span><span class="${colors[level] || 'log-info'}">${level.toUpperCase()}</span> — ${message}`;
-      container.appendChild(entry);
-      container.scrollTop = container.scrollHeight;
-    }
+function renderAfiliadosModule(){
+  return `
+    <div class="filters-bar">
+      <input class="search-box" placeholder="Buscar produto afiliado ou campanha...">
+      <select class="form-select"><option>Todas as plataformas</option><option>Hotmart</option><option>Shopee</option><option>Amazon</option><option>Mercado Livre</option></select>
+      <button class="btn btn-primary" onclick="showToast('Novo link de afiliado gerado!','success')">＋ Gerar Link Rastejável</button>
+      <a href="https://hotmart.com" target="_blank" class="btn" style="text-decoration:none">Abrir Hotmart ↗</a>
+    </div>
+    <div class="cards-grid">
+      <div class="card"><div class="card-title">Vendas Totais</div><div class="card-value">342</div><div class="card-meta">Conversões nos últimos 30 dias</div></div>
+      <div class="card"><div class="card-title">Comissões Acumuladas</div><div class="card-value" style="color:var(--positive)">R$ 8.450</div><div class="card-meta">Média de R$ 24,70 / venda</div></div>
+      <div class="card"><div class="card-title">Taxa de Conversão</div><div class="card-value" style="color:var(--accent)">4.82%</div><div class="card-meta">Cliques em links de afiliado</div></div>
+      <div class="card"><div class="card-title">Produtos Ativos</div><div class="card-value">18</div><div class="card-meta">Monetizando no blog & redes</div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Desempenho de Vendas por Plataforma</span></div>
+      <div class="section-body">
+        <div style="height:260px"><canvas id="afiliadosChartDetailed"></canvas></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Produtos Afiliados em Destaque</span></div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead><tr><th>Produto</th><th>Plataforma</th><th>Comissão Média</th><th>Vendas</th><th>Receita Gerada</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr><td><div class="cell-title">Curso Avançado de IA & Prompts</div></td><td>Hotmart</td><td>R$ 150,00</td><td>48</td><td><b style="color:var(--positive)">R$ 7.200,00</b></td><td><button class="btn" onclick="showToast('Link copiado!','success')">Copiar Link</button></td></tr>
+            <tr><td><div class="cell-title">Kit Gadgets Tech & Acessórios</div></td><td>Shopee</td><td>R$ 45,00</td><td>156</td><td><b style="color:var(--positive)">R$ 7.020,00</b></td><td><button class="btn" onclick="showToast('Link copiado!','success')">Copiar Link</button></td></tr>
+            <tr><td><div class="cell-title">Livros & E-books de Programação</div></td><td>Amazon</td><td>R$ 25,00</td><td>110</td><td><b style="color:var(--positive)">R$ 2.750,00</b></td><td><button class="btn" onclick="showToast('Link copiado!','success')">Copiar Link</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
-    function setLoading(btnId, loading) {
-      const btn = document.getElementById(btnId);
-      if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = `<div class="spinner"></div> Processando...`;
-      } else {
-        btn.disabled = false;
-        const isArtigo = btnId === "btn-gerar-artigo";
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> ${isArtigo ? "Gerar Artigo" : "Gerar Notícia"}`;
-      }
-    }
 
-    // ============================================================
-    // SELEÇÃO DE MODELO
-    // ============================================================
-    function selectModel(el, modelId, modelName) {
-      document.querySelectorAll(".model-chip").forEach(c => { if (!c.classList.contains("disabled")) c.classList.remove("selected"); });
-      el.classList.add("selected");
-      selectedModel = modelId;
-      selectedModelName = modelName;
-      addLog("info", `Modelo alterado para: ${modelName}`);
-      showToast(`Modelo ativo: ${modelName}`);
-    }
+function initFinanceChart(){
+  try {
+    new Chart(document.getElementById('financeChartDetailed'), {
+      type: 'line',
+      data: {
+        labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+        datasets: [
+          {label: 'Receita Bruta', data: [3200, 3900, 4100, 3650], borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', fill: true, tension: 0.3},
+          {label: 'Custos', data: [800, 900, 950, 920], borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.1)', fill: true, tension: 0.3}
+        ]
+      },
+      options: {responsive:true, maintainAspectRatio:false}
+    });
+  } catch(e){ console.log('Finance chart error:', e); }
+}
 
-    // ============================================================
-    // GERAR ARTIGO — INTEGRADO COM BACKEND
-    // ============================================================
-    async function gerarArtigo() {
-      const tema = document.getElementById("artigo-tema").value.trim();
-      const categoria = document.getElementById("artigo-categoria").value;
-      const tom = document.getElementById("artigo-tom").value;
-      const tamanho = document.getElementById("artigo-tamanho").value;
-      const publicar = document.getElementById("artigo-publicar").checked;
+function initAfiliadosChart(){
+  try {
+    new Chart(document.getElementById('afiliadosChartDetailed'), {
+      type: 'bar',
+      data: {
+        labels: ['Hotmart', 'Shopee', 'Amazon', 'Mercado Livre'],
+        datasets: [{label: 'Vendas Realizadas', data: [120, 156, 110, 45], backgroundColor: ['#a371f7', '#58a6ff', '#3fb950', '#d29922']}]
+      },
+      options: {responsive:true, maintainAspectRatio:false}
+    });
+  } catch(e){ console.log('Afiliados chart error:', e); }
+}
 
-      if (!tema) { showToast("Informe o tema do artigo", "error"); return; }
+function initGoogleChart(){
+  try {
+    new Chart(document.getElementById('googleChartDetailed'), {
+      type: 'line',
+      data: {
+        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+        datasets: [{
+          label: 'Cliques Search Console',
+          data: [1420, 1680, 1590, 1850, 1920, 2100, 2250],
+          borderColor: '#58a6ff',
+          backgroundColor: 'rgba(88,166,255,0.15)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {responsive:true, maintainAspectRatio:false}
+    });
+  } catch(e) { console.log('Google Chart error:', e); }
+}
 
-      setLoading("btn-gerar-artigo", true);
-      addLog("info", `Iniciando geração de artigo: "${tema}"`);
+function renderSocialModule() {
+  return `
+    <div class="filters-bar">
+      <button class="btn btn-primary" onclick="showToast('Novo agendamento aberto','info')">＋ Agendar Postagem</button>
+      <select class="form-select"><option>Todas as redes</option><option>LinkedIn</option><option>Instagram</option><option>X / Twitter</option></select>
+    </div>
+    <div class="cards-grid">
+      <div class="card"><div class="card-title">Agendamentos</div><div class="card-value">5</div><div class="card-meta">Próximas 24 horas</div></div>
+      <div class="card"><div class="card-title">Alcance Total</div><div class="card-value" style="color:var(--warning)">32.4k</div><div class="card-meta">Impressões</div></div>
+      <div class="card"><div class="card-title">Engajamento</div><div class="card-value" style="color:var(--positive)">6.2%</div><div class="card-meta">Taxa média</div></div>
+      <div class="card"><div class="card-title">Novos Seguidores</div><div class="card-value" style="color:var(--accent)">+840</div><div class="card-meta">Últimos 7 dias</div></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Engajamento por Canal</span></div>
+      <div class="section-body">
+        <div style="height:260px"><canvas id="socialChartDetailed"></canvas></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Fila de Postagens</span></div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead><tr><th>Postagem</th><th>Rede</th><th>Data/Hora</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr><td><div class="cell-title">Novidades do ecossistema de IA</div></td><td>LinkedIn</td><td>Hoje, 18:00</td><td><span class="cell-status revisao">Agendado</span></td><td><button class="btn">Editar</button></td></tr>
+            <tr><td><div class="cell-title">Dicas de produtividade com IA</div></td><td>Instagram</td><td>Amanhã, 10:00</td><td><span class="cell-status rascunho">Rascunho</span></td><td><button class="btn">Editar</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
-      try {
-        const response = await fetch(`${API_BASE}/artigos/gerar`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tema, categoria, tom, tamanho, publicar, modelo: selectedModel })
-        });
+function initSocialChart(){
+  try {
+    new Chart(document.getElementById('socialChartDetailed'), {
+      type: 'bar',
+      data: {
+        labels: ['LinkedIn', 'Instagram', 'X / Twitter', 'Facebook'],
+        datasets: [{label: 'Alcance Mensal', data: [12000, 15400, 5000, 8900], backgroundColor: ['#58a6ff', '#a371f7', '#3fb950', '#d29922']}]
+      },
+      options: {responsive:true, maintainAspectRatio:false}
+    });
+  } catch(e){ console.log('Social chart error:', e); }
+}
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-
-        addLog("success", `Artigo #${data.id} gerado: "${data.titulo}"`);
-        showToast(`Artigo gerado! ID: #${data.id}`);
-        adicionarArtigoNaTabela(data.id, data.titulo, categoria, data.status);
-
-      } catch (err) {
-        addLog("error", `Falha ao gerar artigo: ${err.message}`);
-        showToast("Erro ao gerar artigo. Verifique o backend.", "error");
-      } finally {
-        setLoading("btn-gerar-artigo", false);
-      }
-    }
-
-    // ============================================================
-    // GERAR NOTÍCIA — INTEGRADO COM BACKEND
-    // ============================================================
-    async function gerarNoticia() {
-      const tema = document.getElementById("noticia-tema").value.trim();
-      const categoria = document.getElementById("noticia-categoria").value;
-      const publicar = document.getElementById("noticia-publicar").checked;
-
-      if (!tema) { showToast("Informe o tema da notícia", "error"); return; }
-
-      setLoading("btn-gerar-noticia", true);
-      addLog("info", `Iniciando geração de notícia: "${tema}"`);
-
-      try {
-        const response = await fetch(`${API_BASE}/noticias/gerar`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tema, categoria, publicar, modelo: selectedModel })
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-
-        addLog("success", `Notícia #${data.id} gerada: "${data.titulo}"`);
-        showToast(`Notícia gerada! ID: #${data.id}`);
-
-      } catch (err) {
-        addLog("error", `Falha ao gerar notícia: ${err.message}`);
-        showToast("Erro ao gerar notícia", "error");
-      } finally {
-        setLoading("btn-gerar-noticia", false);
-      }
-    }
-
-    // ============================================================
-    // GERENCIAMENTO DE ARTIGOS — INTEGRADO COM BACKEND
-    // ============================================================
-    async function publicarArtigo(id) {
-      addLog("info", `Publicando artigo #${id}...`);
-      try {
-        const response = await fetch(`${API_BASE}/artigos/publicar/${id}`, { method: "POST" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-
-        addLog("success", `Artigo #${id} publicado no GitHub`);
-        showToast(`Artigo #${id} publicado!`);
-        atualizarStatusArtigo(id, "publicado");
-      } catch (err) {
-        addLog("error", `Falha ao publicar #${id}: ${err.message}`);
-        showToast("Erro ao publicar", "error");
-      }
-    }
-
-    async function excluirArtigo(id) {
-      if (!confirm(`Tem certeza que deseja excluir o artigo #${id}?`)) return;
-      addLog("warn", `Excluindo artigo #${id}...`);
-      try {
-        const response = await fetch(`${API_BASE}/artigos/${id}`, { method: "DELETE" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        document.querySelectorAll("#artigos-tbody tr").forEach(row => { if (row.cells[0].textContent == id) row.remove(); });
-        addLog("success", `Artigo #${id} excluído`);
-        showToast(`Artigo #${id} excluído`);
-      } catch (err) {
-        addLog("error", `Falha ao excluir #${id}: ${err.message}`);
-        showToast("Erro ao excluir", "error");
-      }
-    }
-
-    function verNoGithub(id) {
-      addLog("info", `Abrindo artigo #${id} no GitHub...`);
-      showToast(`Abrindo artigo #${id} no GitHub`);
-      // window.open(`https://github.com/seu-repo/artigos/${id}`, "_blank");
-    }
-
-    function adicionarArtigoNaTabela(id, titulo, categoria, status) {
-      const tbody = document.getElementById("artigos-tbody");
-      const row = document.createElement("tr");
-      const hoje = new Date().toLocaleDateString("pt-BR");
-      const badgeClass = status === "publicado" ? "badge-published" : "badge-draft";
-      const dotColor = status === "publicado" ? "var(--positive)" : "var(--warning)";
-      const acoes = status === "publicado"
-        ? `<button class="btn btn-sm" onclick="verNoGithub(${id})">GitHub</button>`
-        : `<button class="btn btn-sm" onclick="publicarArtigo(${id})">Publicar</button> <button class="btn btn-sm btn-danger" onclick="excluirArtigo(${id})">Excluir</button>`;
-
-      row.innerHTML = `<td>${id}</td><td>${titulo}</td><td>${categoria}</td><td><span class="badge ${badgeClass}"><span class="badge-dot" style="background:${dotColor};"></span> ${status === "publicado" ? "Publicado" : "Rascunho"}</span></td><td>${hoje}</td><td>${acoes}</td>`;
-      tbody.insertBefore(row, tbody.firstChild);
-    }
-
-    function atualizarStatusArtigo(id, novoStatus) {
-      document.querySelectorAll("#artigos-tbody tr").forEach(row => {
-        if (row.cells[0].textContent == id) {
-          const badge = row.cells[3].querySelector(".badge");
-          badge.className = `badge badge-${novoStatus}`;
-          badge.innerHTML = `<span class="badge-dot" style="background:var(--positive);"></span> Publicado`;
-          row.cells[5].innerHTML = `<button class="btn btn-sm" onclick="verNoGithub(${id})">GitHub</button>`;
+function initMiniCharts() {
+  const chartConfigs = [
+    {id: 'chart-google', type: 'line', color: '#58a6ff', data: [10, 25, 15, 35, 20, 45, 30]},
+    {id: 'chart-afiliados', type: 'bar', color: '#3fb950', data: [40, 60, 45, 70, 55, 80, 65]},
+    {id: 'chart-financeiro', type: 'line', color: '#a371f7', data: [20, 15, 30, 25, 40, 35, 50]},
+    {id: 'chart-social', type: 'bar', color: '#d29922', data: [30, 40, 35, 50, 45, 60, 55]}
+  ];
+  chartConfigs.forEach(conf => {
+    const el = document.getElementById(conf.id);
+    if(el) {
+      new Chart(el, {
+        type: conf.type,
+        data: {
+          labels: ['', '', '', '', '', '', ''],
+          datasets: [{
+            data: conf.data,
+            borderColor: conf.color,
+            backgroundColor: conf.color + '22',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } }
         }
       });
     }
+  });
+}
 
-    // ============================================================
-    // CARREGAR ARTIGOS DO BACKEND
-    // ============================================================
-    async function carregarArtigos() {
-      addLog("info", "Carregando artigos do backend...");
-      try {
-        const response = await fetch(`${API_BASE}/artigos`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const artigos = await response.json();
+function sendEmailSimulated() {
+  const btn = document.getElementById('btn-send-email');
+  const statusBox = document.getElementById('email-status-box');
+  if(!btn || !statusBox) return;
 
-        const tbody = document.getElementById("artigos-tbody");
-        tbody.innerHTML = "";
-        artigos.forEach(a => adicionarArtigoNaTabela(a.id, a.titulo, a.categoria, a.status));
-
-        addLog("success", `${artigos.length} artigos carregados`);
-        showToast("Lista de artigos atualizada");
-      } catch (err) {
-        addLog("error", `Falha ao carregar artigos: ${err.message}`);
-        showToast("Erro ao carregar artigos", "error");
-      }
+  btn.disabled = true;
+  btn.textContent = 'Enviando e-mails...';
+  statusBox.innerHTML = '<div style="color:var(--accent); margin-top:10px;">⏳ Conectando ao servidor SMTP... Progresso: 0%</div>';
+  
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 25;
+    if(progress < 100) {
+      statusBox.innerHTML = `<div style="color:var(--accent); margin-top:10px;">⏳ Disparando campanha... Progresso: ${progress}%</div>`;
+    } else {
+      clearInterval(interval);
+      btn.disabled = false;
+      btn.textContent = 'Enviar E-mail Agora';
+      statusBox.innerHTML = '<div style="color:var(--positive); margin-top:10px; font-weight:600;">✓ Campanha de e-mail disparada com sucesso para 1.420 destinatários! (Log ID: #EM-' + Math.floor(Math.random()*90000+10000) + ')</div>';
+      showToast('E-mails enviados com sucesso!', 'success');
     }
+  }, 400);
+}
 
-    // ============================================================
-    // CHECK DE SAÚDE — INTEGRADO COM BACKEND
-    // ============================================================
-    async function checkHealth() {
-      try {
-        const response = await fetch(`${API_BASE}/health`);
-        if (!response.ok) throw new Error("Offline");
-        const data = await response.json();
+function sendWhatsappSimulated() {
+  const btn = document.getElementById('btn-send-wa');
+  const statusBox = document.getElementById('wa-status-box');
+  if(!btn || !statusBox) return;
 
-        updateStatus("api", data.status === "ok");
-        updateStatus("ollama", data.ollama);
-        updateStatus("db", data.database);
-        updateStatus("github", data.github);
-      } catch (err) {
-        updateStatus("api", false);
-        updateStatus("ollama", false);
-        updateStatus("db", false);
-        updateStatus("github", false);
-      }
+  btn.disabled = true;
+  btn.textContent = 'Enviando WhatsApp...';
+  statusBox.innerHTML = '<div style="color:var(--accent); margin-top:10px;">⏳ Autenticando na API do WhatsApp... Progresso: 0%</div>';
+  
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 33;
+    if(progress < 100) {
+      statusBox.innerHTML = `<div style="color:var(--accent); margin-top:10px;">⏳ Enviando mensagens... Progresso: ${progress}%</div>`;
+    } else {
+      clearInterval(interval);
+      btn.disabled = false;
+      btn.textContent = 'Disparar WhatsApp';
+      statusBox.innerHTML = '<div style="color:var(--positive); margin-top:10px; font-weight:600;">✓ Mensagens de WhatsApp disparadas com sucesso! (Status: Entregue - Log ID: #WA-' + Math.floor(Math.random()*90000+10000) + ')</div>';
+      showToast('WhatsApp disparado com sucesso!', 'success');
     }
+  }, 400);
+}
 
-    function updateStatus(service, online) {
-      const el = document.getElementById(`status-${service}`);
-      const icon = document.getElementById(`status-${service}-icon`);
-      if (online) {
-        el.textContent = service === "github" ? "Conectado" : "Online";
-        el.className = "status-value online";
-        icon.className = "status-icon online";
-      } else {
-        el.textContent = "Offline";
-        el.className = "status-value offline";
-        icon.className = "status-icon offline";
-      }
-    }
+function renderEmailPage() {
+  return `
+    <div class="section">
+      <div class="section-header"><span class="section-title">📧 Enviar E-mail em Massa / Campanha</span></div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Destinatários (Lista ou Segmento)</label>
+            <select class="form-select" id="email-recipient">
+              <option>Todos os Leads Ativos (1.420)</option>
+              <option>Clientes VIP (320)</option>
+              <option>Inativos há 30 dias (850)</option>
+              <option>Lista Importada por Arquivo (CSV/TXT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload de Lista de E-mails (.csv, .txt)</label>
+            <input type="file" class="form-input" id="email-file-upload" accept=".csv,.txt" onchange="showToast('Arquivo de e-mails carregado com sucesso!', 'success')">
+            <span class="form-hint">Formato esperado: um e-mail por linha ou CSV com coluna 'email'.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assunto do E-mail</label>
+            <input type="text" class="form-input" id="email-subject" placeholder="Ex: Novidades imperdíveis da semana!">
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Mensagem (Suporta Markdown)</label>
+            <textarea class="form-textarea" id="email-body" placeholder="Digite o conteúdo da mensagem..."></textarea>
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" id="btn-send-email" onclick="sendEmailSimulated()">Enviar E-mail Agora</button>
+          <button class="btn" onclick="showToast('Rascunho salvo com sucesso!')">Salvar Rascunho</button>
+        </div>
+        <div id="email-status-box"></div>
+      </div>
+    </div>
+  `;
+}
 
-    // ============================================================
-    // LOGS
-    // ============================================================
-    function limparLogs() {
-      document.getElementById("log-container").innerHTML = "";
-      addLog("info", "Logs limpos");
-    }
+function renderWhatsappPage() {
+  return `
+    <div class="section">
+      <div class="section-header"><span class="section-title">💬 Enviar Mensagem via WhatsApp API</span></div>
+      <div class="section-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Número ou Segmento</label>
+            <input type="text" class="form-input" id="wa-recipient" placeholder="Ex: +55 11 99999-9999 ou Lista VIP">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload de Lista de Telefones (.csv, .txt)</label>
+            <input type="file" class="form-input" id="wa-file-upload" accept=".csv,.txt" onchange="showToast('Lista de telefones carregada com sucesso!', 'success')">
+            <span class="form-hint">Formato esperado: números com DDD (ex: 11999999999).</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Template de Mensagem</label>
+            <select class="form-select">
+              <option>Aviso de Novo Artigo no Blog</option>
+              <option>Promoção de Afiliados</option>
+              <option>Suporte Personalizado</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">Texto da Mensagem</label>
+            <textarea class="form-textarea" id="wa-body" placeholder="Olá! Confira nosso novo conteúdo publicado hoje..."></textarea>
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-primary" id="btn-send-wa" onclick="sendWhatsappSimulated()">Disparar WhatsApp</button>
+          <button class="btn" onclick="showToast('Teste enviado para seu número!')">Enviar Teste</button>
+        </div>
+        <div id="wa-status-box"></div>
+      </div>
+    </div>
+  `;
+}
 
-    // ============================================================
-    // INICIALIZAÇÃO
-    // ============================================================
-    document.addEventListener("DOMContentLoaded", () => {
-      checkHealth();
-      setInterval(checkHealth, 30000);
-      addLog("info", "Dashboard carregado. Aguardando comandos.");
-    });
-  </script>
-</body>
-</html>
+function renderCadastroUsuariosPage() {
+  return `
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">👥 Cadastro de Leitores (Newsletter & Novidades)</span>
+        <button class="btn btn-primary" onclick="showToast('Exportado com sucesso!','success')">📥 Exportar Leads</button>
+      </div>
+      <div class="section-body">
+        <p style="color:var(--text-secondary); margin-bottom:16px;">Leitores cadastrados pelo site para receber notícias e artigos em primeira mão.</p>
+        <div class="filters-bar">
+          <input class="search-box" placeholder="Buscar por e-mail ou nome...">
+          <select class="form-select"><option>Todos os Status</option><option>Ativos</option><option>Pendentes</option></select>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>WhatsApp</th><th>Data de Cadastro</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="cell-title">Carlos Eduardo</div></td>
+              <td>carlos.edu@gmail.com</td>
+              <td>(11) 98765-4321</td>
+              <td>Hoje, 11:42</td>
+              <td><span class="cell-status publicado">Ativo</span></td>
+              <td><button class="btn" onclick="showToast('E-mail de boas-vindas reenviado!','success')">Reenviar Boas-vindas</button></td>
+            </tr>
+            <tr>
+              <td><div class="cell-title">Mariana Souza</div></td>
+              <td>mariana.souza@yahoo.com</td>
+              <td>(21) 99123-4567</td>
+              <td>Ontem, 16:20</td>
+              <td><span class="cell-status publicado">Ativo</span></td>
+              <td><button class="btn" onclick="showToast('E-mail de boas-vindas reenviado!','success')">Reenviar Boas-vindas</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function sharePublication(title) {
+  const dummyUrl = "https://digitaltech.agent/post/" + encodeURIComponent(title.toLowerCase().replace(/\s+/g, '-'));
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(dummyUrl);
+    showToast('Link de compartilhamento copiado para a área de transferência!', 'success');
+  } else {
+    showToast('Link: ' + dummyUrl, 'info');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => { setTimeout(initMiniCharts, 200); });
+// Also trigger if dashboard is rendered
+const originalRenderPage = window.renderPage;
+</script>
+
+</body></html>

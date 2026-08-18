@@ -1,496 +1,149 @@
-#!/usr/bin/env python3
 """
-rodar_agente.py — CLI unificado do Agente DigitalTech (v5.1 — corrigido)
+scripts/rodar_agente.py — Ponto de entrada para automação via cron local
 
-Correções desta versão:
-- v5.1: Diagnóstico agora reconhece o Groq (estava mapeado só como "Grok"/xAI
-        no dicionário de chaves, então o Groq nunca era testado de verdade)
-- v5:   Diagnóstico testa TODOS os provedores do llm_service.py automaticamente
-        (OpenAI, Claude, Gemini, DeepSeek, HuggingFace, Groq, Grok, Ollama)
-        Não mais hardcoded na lógica de execução — lê a lista diretamente do
-        llm_service.PROVEDORES (mas o mapa de chaves abaixo precisa cobrir
-        todo nome que aparecer em PROVEDORES, ver nota no código)
-- v4.1: sugerir_tema(categoria=...), gerar_e_processar_artigo() sem db
-- v4.1: NoticiaRepository.publicar() restaurado
-- v4: exit code 1 se falhar
+Gera e publica um artigo e/ou uma notícia por execução. Publica
+imediatamente por padrão (PUBLICAR_IMEDIATAMENTE = True) — pensado
+pra rodar sem supervisão. Se preferir revisar antes de publicar,
+troque PUBLICAR_IMEDIATAMENTE para False abaixo e publique manualmente
+depois (POST /artigos/publicar/{id} ou /noticias/publicar/{id}).
 
-Uso:
-    python rodar_agente.py --artigos --sem-publicar
-    python rodar_agente.py --noticias
-    python rodar_agente.py --pipeline-completo
-    python rodar_agente.py --diagnostico
-    python rodar_agente.py --status
+rodar_artigo() e rodar_noticia() também são importadas por
+pipeline/workflow.py (ponto de entrada do GitHub Actions self-hosted
+runner) — é a MESMA lógica pros dois jeitos de disparar o agente, pra
+nunca ter dois comportamentos diferentes do mesmo pipeline por estarem
+implementados em dois lugares separados.
+
+Uso (linha de comando):
+    python -m scripts.rodar_agente --artigo
+    python -m scripts.rodar_agente --noticia
+    python -m scripts.rodar_agente --artigo --noticia
+
+Cada geração abre suas próprias sessões curtas do banco internamente
+(gerar_artigos.py e gerar_noticias.py já cuidam disso) — este script
+só abre sessão diretamente para ler os títulos recentes usados como
+contexto do sugerir_tema(), e fecha essa sessão logo em seguida.
 """
 
 import argparse
-import os
+import random
 import sys
-import time
 from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config.database import SessionLocal
+from agents import pesquisador
+from repositories.artigo_repository import ArtigoRepository
+from pipeline.gerar_artigos import gerar_e_processar_artigo
+from pipeline.gerar_noticias import gerar_e_processar_noticia
 
-# Importa TUDO do llm_service — incluindo todas as chaves e funções
-from services.llm_service import (
-    PROVEDORES,
-    _tentar_ollama,
-    _tentar_openai,
-    _tentar_claude,
-    _tentar_gemini,
-    _tentar_deepseek,
-    _tentar_huggingface,
-    _tentar_groq,
-    _tentar_grok,
-    OPENAI_KEY,
-    ANTHROPIC_KEY,
-    GEMINI_KEY,
-    DEEPSEEK_KEY,
-    HF_KEY,
-    GROQ_KEY,
-    GROK_KEY,
-    OLLAMA_URL,
-    OLLAMA_MODEL,
-)
+PUBLICAR_IMEDIATAMENTE = True
+
+CATEGORIAS_ARTIGOS = [
+    "Inteligência Artificial",
+    "Programação",
+    "Banco de Dados",
+    "Cibersegurança",
+    "Cloud e DevOps",
+    "Desenvolvimento Web",
+    "Engenharia de Software",
+    "Hardware",
+    "Open Source",
+    "Carreira",
+]
 
 
-def _timestamp():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def _log(mensagem: str) -> None:
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{agora}] {mensagem}", flush=True)
 
 
-def _log(msg: str):
-    print(f"[{_timestamp()}] {msg}")
-
-
-def _banner(texto: str):
-    _log("=" * 60)
-    _log(texto)
-    _log("=" * 60)
-
-
-# ---------------------------------------------------------------------------
-# DIAGNÓSTICO — v5.1: testa TODOS os provedores automaticamente
-# ---------------------------------------------------------------------------
-
-# Mapeamento de chave por nome de provedor (para o diagnóstico saber se testar)
-# IMPORTANTE: a chave deste dicionário precisa bater EXATAMENTE com o nome
-# retornado em llm_service._PROVEDORES_DISPONIVEIS (ex.: "Groq", não "Grok").
-# Se um provedor novo for adicionado lá, precisa ser adicionado aqui também.
-_CHAVES_POR_PROVEDOR = {
-    "Ollama local":    None,  # sem chave
-    "OpenAI GPT":      OPENAI_KEY,
-    "Claude Haiku":    ANTHROPIC_KEY,
-    "Gemini Flash":    GEMINI_KEY,
-    "DeepSeek":        DEEPSEEK_KEY,
-    "HuggingFace":     HF_KEY,
-    "Groq":            GROQ_KEY,
-    "Grok":            GROK_KEY,
-}
-
-
-def _diagnostico_ollama():
-    import httpx
-    _log("[1/2] Verificando Ollama...")
-    print(f"  URL: {OLLAMA_URL}")
-    try:
-        resp = httpx.get(f"{OLLAMA_URL}/api/tags", timeout=10)
-        servidor_ok = resp.status_code == 200
-    except Exception as e:
-        print(f"  Servidor acessível: ❌ NÃO ({e})")
-        return False
-
-    print(f"  Servidor acessível: {'✅ SIM' if servidor_ok else '❌ NÃO'}")
-    if not servidor_ok:
-        return False
-
-    print(f"  Modelo configurado: {OLLAMA_MODEL}")
-    modelos = resp.json().get("models", [])
-    nomes = [m.get("name", m.get("model", "?")) for m in modelos]
-    disponivel = any(OLLAMA_MODEL in n for n in nomes)
-    print(f"  Modelo disponível: {'✅ SIM' if disponivel else '❌ NÃO'}")
-    print(f"  Modelos instalados: {', '.join(nomes[:10])}")
-    if not disponivel:
-        return False
-
-    _log("[2/2] Teste rápido Ollama (prompt simples)...")
-    inicio = time.monotonic()
-    try:
-        resposta = _tentar_ollama("Responda apenas a palavra TESTE. Nada mais.")
-        tempo = (time.monotonic() - inicio) * 1000
-        print(f"  Resultado: ✅ OK")
-        print(f"  Resposta: '{resposta.strip()[:50]}'")
-        print(f"  Tempo: {tempo:.0f}ms")
-        return True
-    except Exception as e:
-        tempo = (time.monotonic() - inicio) * 1000
-        print(f"  Resultado: ❌ FALHA após {tempo:.0f}ms")
-        print(f"  Erro: {e}")
-        return False
-
-
-def _diagnostico_apis():
-    """Testa TODOS os provedores do llm_service.PROVEDORES automaticamente."""
-    _log("[3/3] Verificando TODAS as APIs externas...")
-    print(f"  Ordem de fallback: {[nome for nome, _ in PROVEDORES]}")
-    print("")
-
-    resultados = {}
-
-    for nome_provedor, funcao in PROVEDORES:
-        # Ollama já foi testado separadamente
-        if nome_provedor == "Ollama local":
-            continue
-
-        if nome_provedor not in _CHAVES_POR_PROVEDOR:
-            print(f"  {nome_provedor:<25} ⚠️  provedor sem entrada em _CHAVES_POR_PROVEDOR (bug no diagnóstico, não no provedor)")
-            resultados[nome_provedor] = {"ok": False, "erro": "Provedor não mapeado no diagnóstico"}
-            continue
-
-        chave = _CHAVES_POR_PROVEDOR.get(nome_provedor)
-
-        if chave is None:
-            print(f"  {nome_provedor:<25} ⚠️  CHAVE NÃO CONFIGURADA no .env")
-            resultados[nome_provedor] = {"ok": False, "erro": "Chave não configurada"}
-            continue
-
-        inicio = time.monotonic()
-        try:
-            resposta = funcao("Responda apenas PONG.")
-            tempo = time.monotonic() - inicio
-            print(f"  {nome_provedor:<25} ✅ OK ({tempo:.1f}s)")
-            resultados[nome_provedor] = {"ok": True, "tempo": tempo}
-        except Exception as e:
-            tempo = time.monotonic() - inicio
-            erro = str(e)[:200]
-            print(f"  {nome_provedor:<25} ❌ FALHA ({tempo:.1f}s)")
-            print(f"    → {erro}")
-            resultados[nome_provedor] = {"ok": False, "erro": erro}
-
-    return resultados
-
-
-def _diagnostico_banco():
-    from config.database import SessionLocal
-    from sqlalchemy import text
-    _log("[4/5] Verificando banco de dados...")
-    try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1")).fetchone()
-        db.close()
-        print(f"  Conexão: ✅ OK")
-        return True
-    except Exception as e:
-        print(f"  Conexão: ❌ FALHA — {e}")
-        return False
-
-
-def _diagnostico_github():
-    _log("[5/5] Verificando GitHub...")
-    token = os.getenv("GITHUB_TOKEN")
-    if not token:
-        print(f"  Token: ⚠️  AUSENTE no .env")
-        return False
-    import httpx
-    try:
-        resp = httpx.get(
-            "https://api.github.com/user",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10,
-        )
-        if resp.status_code == 200:
-            login = resp.json().get("login", "?")
-            print(f"  Token: ✅ OK (usuário: {login})")
-            return True
-        else:
-            print(f"  Token: ❌ INVÁLIDO (HTTP {resp.status_code})")
-            return False
-    except Exception as e:
-        print(f"  Token: ❌ ERRO — {e}")
-        return False
-
-
-def _mostrar_diagnostico():
-    _banner("DIAGNÓSTICO DO AGENTE DIGITALTECH")
-    ollama_ok = _diagnostico_ollama()
-    apis = _diagnostico_apis()
-    banco_ok = _diagnostico_banco()
-    github_ok = _diagnostico_github()
-
-    _banner("RESUMO DO DIAGNÓSTICO")
-    print(f"  Ollama:     {'✅ OK' if ollama_ok else '❌ FALHA'}")
-
-    for nome, dados in apis.items():
-        status = "✅ OK" if dados.get("ok") else "❌ FALHA"
-        extra = f" ({dados.get('tempo', 0):.1f}s)" if dados.get("ok") else ""
-        print(f"  {nome:<25} {status}{extra}")
-
-    print(f"  Banco:      {'✅ OK' if banco_ok else '❌ FALHA'}")
-    print(f"  GitHub:     {'✅ OK' if github_ok else '⚠️  NÃO CONFIGURADO'}")
-
-    funcionais = [n for n, d in apis.items() if d.get("ok")]
-    if ollama_ok or funcionais:
-        print(f"\n  ✅ Provedores funcionais: {len(funcionais) + (1 if ollama_ok else 0)}")
-        print(f"     Pipeline pode rodar.")
-    else:
-        print(f"\n  ❌ Nenhum provedor LLM funcional.")
-
-
-# ---------------------------------------------------------------------------
-# STATUS DO BANCO
-# ---------------------------------------------------------------------------
-
-def _mostrar_status():
-    from config.database import SessionLocal
-    from sqlalchemy import text
-    _banner("STATUS DO AGENTE DIGITALTECH")
-    try:
-        db = SessionLocal()
-        artigos = db.execute(text("SELECT status, COUNT(*) as total FROM artigos GROUP BY status")).fetchall()
-        print("  Artigos:")
-        if artigos:
-            for row in artigos:
-                print(f"    {row.status}: {row.total}")
-        else:
-            print("    Nenhum artigo encontrado")
-
-        noticias = db.execute(text("SELECT status, COUNT(*) as total FROM noticias GROUP BY status")).fetchall()
-        print("  Notícias:")
-        if noticias:
-            for row in noticias:
-                print(f"    {row.status}: {row.total}")
-        else:
-            print("    Nenhuma notícia encontrada")
-
-        print("\n  Últimos artigos:")
-        for a in db.execute(text("SELECT slug, titulo, status, criado_em FROM artigos ORDER BY criado_em DESC LIMIT 3")).fetchall():
-            print(f"    [{a.status}] {a.titulo[:50]}... ({a.criado_em})")
-
-        print("\n  Últimas notícias:")
-        for n in db.execute(text("SELECT slug, titulo, status, criado_em FROM noticias ORDER BY criado_em DESC LIMIT 3")).fetchall():
-            print(f"    [{n.status}] {n.titulo[:50]}... ({n.criado_em})")
-
-        db.close()
-    except Exception as e:
-        print(f"  ❌ Erro ao consultar banco: {e}")
-
-
-# ---------------------------------------------------------------------------
-# PIPELINE DE ARTIGOS
-# ---------------------------------------------------------------------------
-
-def _gerar_artigo(publicar: bool = False):
-    from agents import pesquisador
-    from pipeline.gerar_artigos import gerar_e_processar_artigo
-
-    _banner("INICIANDO GERAÇÃO DE ARTIGO")
-
-    categoria = "Tecnologia"
-    tema = pesquisador.sugerir_tema(categoria=categoria)
-    _log(f"Tema sugerido ({categoria}): {tema}")
-
-    try:
-        resultado = gerar_e_processar_artigo(
-            tema=tema,
-            categoria=categoria,
-            publicar_imediatamente=publicar,
-        )
-        _log(f"✅ Artigo salvo: ID={resultado['id']} | slug={resultado['slug']}")
-        _log(f"   Título: {resultado['titulo']}")
-        _log(f"   Status: {resultado['status']}")
-        if resultado.get("github_url"):
-            _log(f"   GitHub: {resultado['github_url']}")
-        return True
-    except ValueError as exc:
-        _log(f"⚠️  {exc}")
-        return False
-    except Exception as exc:
-        _log(f"❌ Erro ao gerar artigo: {exc}")
-        return False
-
-
-# ---------------------------------------------------------------------------
-# PIPELINE DE NOTÍCIAS
-# ---------------------------------------------------------------------------
-
-def _gerar_noticia(publicar: bool = False):
-    from pipeline.gerar_noticias import gerar_e_processar_noticia
-    _banner("INICIANDO GERAÇÃO DE NOTÍCIA")
-    try:
-        resultado = gerar_e_processar_noticia(
-            categoria="Tecnologia",
-            publicar_imediatamente=publicar,
-        )
-        _log(f"✅ Notícia salva: ID={resultado['id']} | slug={resultado['slug']}")
-        _log(f"   Título: {resultado['titulo']}")
-        _log(f"   Status: {resultado['status']}")
-        _log(f"   Fonte: {resultado.get('fonte_original', 'N/A')}")
-        return True
-    except ValueError as exc:
-        _log(f"⚠️  {exc}")
-        return False
-    except Exception as exc:
-        _log(f"❌ Erro ao gerar notícia: {exc}")
-        return False
-
-
-# ---------------------------------------------------------------------------
-# PUBLICAR PENDENTES
-# ---------------------------------------------------------------------------
-
-def _publicar_pendentes():
-    from agents import publisher
-    from repositories.artigo_repository import ArtigoRepository
-    from repositories.noticia_repository import NoticiaRepository
-    from config.database import SessionLocal
-    from sqlalchemy import text
-
-    _banner("PUBLICANDO RASCUNHOS PENDENTES")
-
+def _buscar_temas_recentes(limite: int = 30) -> list[str]:
+    """
+    Busca os títulos mais recentes no banco para servir de contexto ao
+    sugerir_tema() (evita repetir assunto). Protegido por try/except
+    porque a assinatura exata de ArtigoRepository.listar_todos() ainda
+    não foi confirmada — se ela não aceitar 'limite', ou qualquer outra
+    coisa falhar aqui, a geração do artigo não deve travar por causa
+    disso, só perde o contexto de "não repita esses temas".
+    """
     db = SessionLocal()
-    publicados = 0
-    falhas = 0
     try:
-        pendentes_artigos = db.execute(text(
-            "SELECT id, slug, titulo FROM artigos WHERE status = 'rascunho'"
-        )).fetchall()
-
-        for artigo in pendentes_artigos:
-            try:
-                publisher.publicar(db, artigo.id)
-                _log(f"✅ Publicado artigo: {artigo.titulo[:50]}")
-                publicados += 1
-            except Exception as e:
-                _log(f"❌ Falha ao publicar artigo {artigo.id}: {e}")
-                falhas += 1
-
-        noticias_repo = NoticiaRepository(db)
-        pendentes_noticias = db.execute(text(
-            "SELECT id, slug, titulo FROM noticias WHERE status = 'rascunho'"
-        )).fetchall()
-
-        for noticia in pendentes_noticias:
-            try:
-                noticias_repo.publicar(noticia.id)
-                _log(f"✅ Publicada notícia: {noticia.titulo[:50]}")
-                publicados += 1
-            except Exception as e:
-                _log(f"❌ Falha ao publicar notícia {noticia.id}: {e}")
-                falhas += 1
-
-        if publicados == 0 and falhas == 0:
-            _log("Nenhum rascunho pendente encontrado.")
-            return True
-        elif falhas > 0:
-            _log(f"Total: {publicados} publicados, {falhas} falhas")
-            return False
-        else:
-            _log(f"Total publicado: {publicados}")
-            return True
+        artigos = ArtigoRepository(db).listar_todos(limite=limite)
+        return [a.titulo for a in artigos]
+    except TypeError as e:
+        _log(f"AVISO: listar_todos() não aceitou 'limite' ({e}) — seguindo sem temas recentes")
+        return []
+    except Exception as e:
+        _log(f"AVISO: falha ao buscar temas recentes ({e}) — seguindo sem temas recentes")
+        return []
     finally:
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# AGENDAMENTO
-# ---------------------------------------------------------------------------
+def rodar_artigo(publicar: bool | None = None) -> bool:
+    """
+    Gera um artigo evergreen. Retorna True em sucesso, False em falha
+    real — nunca lança exceção, quem chama decide o que fazer com o
+    resultado (ex.: exit code pro cron/GitHub Actions perceber falha).
+    """
+    publicar_imediatamente = PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    categoria = random.choice(CATEGORIAS_ARTIGOS)
+    temas_recentes = _buscar_temas_recentes(limite=30)
 
-def _mostrar_agendamento():
-    _banner("AGENDAMENTO VIA CRON")
-    print("""
-  Adicione ao crontab do usuário:
+    try:
+        tema = pesquisador.sugerir_tema(categoria, temas_recentes=temas_recentes)
+    except Exception as e:
+        _log(f"FALHA ao sugerir tema: {e}")
+        return False
 
-    crontab -e
+    _log(f"Tema sugerido ({categoria}): {tema}")
 
-  Exemplos:
-
-  # A cada 6 horas (artigo + notícia, sem publicar)
-  0 */6 * * * cd ~/projetos/agente-ads && /usr/bin/python3 rodar_agente.py --executar --sem-publicar >> logs/agente.log 2>&1
-
-  # A cada 2 horas (só notícias)
-  0 */2 * * * cd ~/projetos/agente-ads && /usr/bin/python3 rodar_agente.py --noticias >> logs/noticias.log 2>&1
-
-  # Uma vez por dia (pipeline completo com publicação)
-  0 9 * * * cd ~/projetos/agente-ads && /usr/bin/python3 rodar_agente.py --pipeline-completo >> logs/pipeline.log 2>&1
-
-  # Verifique se o diretório logs/ existe:
-    mkdir -p ~/projetos/agente-ads/logs
-""")
+    try:
+        resultado = gerar_e_processar_artigo(
+            tema, categoria, publicar_imediatamente=publicar_imediatamente
+        )
+        _log(f"Artigo OK: {resultado}")
+        return True
+    except Exception as e:
+        _log(f"FALHA ao gerar artigo: {e}")
+        return False
 
 
-# ---------------------------------------------------------------------------
-# MAIN
-# ---------------------------------------------------------------------------
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Agente DigitalTech — Geração autônoma de artigos e notícias",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""Exemplos:
-  python rodar_agente.py --executar              # Pipeline padrão
-  python rodar_agente.py --pipeline-completo     # Tudo + publicação
-  python rodar_agente.py --artigos --noticias    # Mesmo que --pipeline-completo
-  python rodar_agente.py --diagnostico           # Verifica TODOS os provedores LLM
-  python rodar_agente.py --status                # Mostra resumo do banco
-""",
-    )
-    parser.add_argument("--executar", action="store_true", help="Executa artigo + notícia (padrão)")
-    parser.add_argument("--agendar", action="store_true", help="Mostra instruções de agendamento via cron")
-    parser.add_argument("--noticias", action="store_true", help="Gera apenas notícias via RSS")
-    parser.add_argument("--artigos", action="store_true", help="Gera apenas artigos evergreen")
-    parser.add_argument("--publicar", action="store_true", help="Publica rascunhos pendentes no GitHub")
-    parser.add_argument("--pipeline-completo", action="store_true", help="Artigo + notícia + publicação de pendentes")
-    parser.add_argument("--diagnostico", action="store_true", help="Diagnóstico completo de TODOS os provedores LLM")
-    parser.add_argument("--status", action="store_true", help="Mostra status do banco e GitHub")
-    parser.add_argument("--sem-publicar", action="store_true", help="Gera como rascunho, sem publicar")
-
-    args = parser.parse_args()
-
-    if not any([
-        args.executar, args.agendar, args.noticias, args.artigos,
-        args.publicar, args.pipeline_completo, args.diagnostico, args.status,
-    ]):
-        parser.print_help()
-        return 0
-
-    if args.diagnostico:
-        _mostrar_diagnostico()
-        return 0
-
-    if args.status:
-        _mostrar_status()
-        return 0
-
-    if args.agendar:
-        _mostrar_agendamento()
-        return 0
-
-    publicar = not args.sem_publicar
-
-    resultados = {"artigo": None, "noticia": None, "publicacao": None}
-
-    rodar_artigos = args.artigos or args.executar or args.pipeline_completo
-    rodar_noticias = args.noticias or args.executar or args.pipeline_completo
-    rodar_publicar = args.publicar or args.pipeline_completo
-
-    if rodar_artigos:
-        resultados["artigo"] = _gerar_artigo(publicar=publicar)
-
-    if rodar_noticias:
-        resultados["noticia"] = _gerar_noticia(publicar=publicar)
-
-    if rodar_publicar:
-        resultados["publicacao"] = _publicar_pendentes()
-
-    _banner("RESUMO DA EXECUÇÃO")
-    if resultados["artigo"] is not None:
-        _log(f"Artigo: {'✅ OK' if resultados['artigo'] else '❌ FALHA'}")
-    if resultados["noticia"] is not None:
-        _log(f"Notícia: {'✅ OK' if resultados['noticia'] else '❌ FALHA'}")
-    if resultados["publicacao"] is not None:
-        _log(f"Publicação: {'✅ OK' if resultados['publicacao'] else '❌ FALHA'}")
-
-    teve_falha = any(v is False for v in resultados.values() if v is not None)
-    return 1 if teve_falha else 0
+def rodar_noticia(publicar: bool | None = None) -> bool:
+    """
+    Gera uma notícia via RSS. Retorna True em sucesso — inclusive
+    quando não havia nada de novo pra gerar (ValueError esperado do
+    pipeline: feeds sem novidade, tudo duplicado etc. — isso não é uma
+    falha real, é um estado normal). Só retorna False em erro
+    inesperado.
+    """
+    publicar_imediatamente = PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    try:
+        resultado = gerar_e_processar_noticia(publicar_imediatamente=publicar_imediatamente)
+        _log(f"Notícia OK: {resultado}")
+        return True
+    except ValueError as e:
+        _log(f"Sem notícia nova: {e}")
+        return True
+    except Exception as e:
+        _log(f"FALHA ao gerar notícia: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    parser = argparse.ArgumentParser(description="Gera artigo e/ou notícia — para uso via cron.")
+    parser.add_argument("--artigo", action="store_true", help="Gera um artigo evergreen")
+    parser.add_argument("--noticia", action="store_true", help="Gera uma notícia via RSS")
+    args = parser.parse_args()
+
+    if not args.artigo and not args.noticia:
+        parser.error("Use --artigo, --noticia, ou os dois.")
+
+    ok_artigo = True
+    ok_noticia = True
+
+    if args.artigo:
+        ok_artigo = rodar_artigo()
+    if args.noticia:
+        ok_noticia = rodar_noticia()
+
+    sys.exit(0 if (ok_artigo and ok_noticia) else 1)
