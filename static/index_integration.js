@@ -60,7 +60,8 @@ async function loadStateFromAPI() {
 }
 
 // ------------------------------------------------------------------
-// 2. SUBSTITUIÇÃO: Dashboard com dados reais
+// 2. Dashboard: mantém o refresh de stats para uso futuro, mas não
+//    sobrescreve renderDashboard() — ver nota abaixo.
 // ------------------------------------------------------------------
 async function refreshDashboard() {
     try {
@@ -72,40 +73,12 @@ async function refreshDashboard() {
     }
 }
 
-// Sobrescreve renderDashboard para usar dados reais quando disponíveis
-const _originalRenderDashboard = window.renderDashboard;
-window.renderDashboard = function() {
-    const a = state.items.filter(x => x.tipo === 'artigo');
-    const n = state.items.filter(x => x.tipo === 'noticia');
-    const rev = state.items.filter(x => x.status === 'revisao');
-    const stats = state.dashboard || {};
-
-    return `
-    <div class="cards-grid">
-      <div class="card">
-        <div class="card-title">Artigos</div>
-        <div class="card-value">${stats.artigos ?? a.length}</div>
-        <div class="card-meta">Criados e revisados</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Notícias</div>
-        <div class="card-value">${stats.noticias ?? n.length}</div>
-        <div class="card-meta">Gerenciadas no blog</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Em revisão</div>
-        <div class="card-value">${stats.revisao ?? rev.length}</div>
-        <div class="card-meta">Aguardando aprovação</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Publicados</div>
-        <div class="card-value">${stats.publicados ?? state.items.filter(x=>x.status==='publicado').length}</div>
-        <div class="card-meta">No ar</div>
-      </div>
-    </div>
-    <!-- ... resto do dashboard permanece igual ... -->
-    `;
-};
+// Nota: NÃO sobrescrevemos window.renderDashboard aqui. A função original
+// já usa state.items (que loadStateFromAPI() preenche com dados reais da
+// API), então os contadores de Artigos/Notícias/Em revisão já saem corretos
+// sozinhos — e mantemos os demais cards, seções e o Hub de Atalhos que a
+// versão anterior deste arquivo estava descartando ao sobrescrever a função
+// inteira.
 
 // ------------------------------------------------------------------
 // 3. SUBSTITUIÇÃO: listagem com filtros via API
@@ -153,7 +126,7 @@ window.saveContent = async function() {
         categoria: get('form-categoria') || '',
         tags: (get('form-tags') || '').split(',').map(t => t.trim()).filter(Boolean),
         status: get('form-status') || 'rascunho',
-        tipo: state.editingType === 'notícia' ? 'noticia' : 'artigo',
+        tipo: (state.editingType === 'notícia' || state.activeForm === 'notícia') ? 'noticia' : 'artigo',
         imagem_url: get('form-featured-url')?.trim() || null,
         seo_title: get('seo-title')?.trim() || null,
         seo_description: get('seo-description')?.trim() || null,
@@ -222,7 +195,7 @@ window.editItem = async function(id) {
         set('seo-title', item.seo_title);
         set('seo-description', item.seo_description);
 
-        navigateTo('editor');
+        navigateTo(state.editingType === 'notícia' ? 'publicar-noticia' : 'publicar');
     } catch (e) {
         showToast('Erro ao carregar edição: ' + e.message, 'error');
     }
@@ -237,10 +210,10 @@ window.gerarArtigo = async function() {
     if (!tema) return;
     showToast('Gerando artigo com IA...', 'info');
     try {
-        await apiPost('/api/artigos/gerar', { 
-            tema, 
+        await apiPost('/api/artigos/gerar', {
+            tema,
             categoria: 'Tecnologia',
-            publicar_imediatamente: false 
+            publicar_imediatamente: false
         });
         showToast('Artigo gerado e enviado para revisão!', 'success');
         await loadStateFromAPI();
@@ -258,9 +231,9 @@ window.gerarNoticia = async function() {
     const tema = prompt('Qual o tema da notícia?', 'Novidades do Ecossistema de IA');
     showToast('Gerando notícia com IA...', 'info');
     try {
-        await apiPost('/api/noticias/gerar', { 
-            tema: tema || undefined,
-            publicar_imediatamente: false 
+        await apiPost('/api/noticias/gerar', {
+            categoria: 'Tecnologia',
+            publicar_imediatamente: false
         });
         showToast('Notícia gerada e enviada para revisão!', 'success');
         await loadStateFromAPI();

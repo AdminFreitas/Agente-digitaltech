@@ -63,7 +63,27 @@ razoável dado que `criar()` já usa esses nomes, mas é uma suposição.
    vira `publicado` no Neon (lembre: isso NÃO publica no GitHub — só
    `publisher.publicar()`, usado por artigos, faz isso).
 
-## Compatibilidade
+## Bug adicional corrigido nesta rodada: cards sumindo do Dashboard
+
+`index_integration.js` sobrescrevia `window.renderDashboard` inteiro com uma
+versão de só 4 cards, terminando com um comentário HTML
+(`<!-- ... resto do dashboard permanece igual ... -->`) que **não executa
+nada** — é só texto dentro da string retornada. Isso apagava, só na página
+Dashboard e só quando a integração com a API estava ativa:
+
+- Os outros 5 cards do topo (Usuários, Comentários, Receita estimada,
+  Cliques em anúncios, Saúde do agente)
+- A seção "Manutenção rápida do blog"
+- A seção "Atividade recente"
+- A seção "Hub de Navegação & Atalhos" (4 cards de atalho)
+
+**Correção:** removi o override. Não era necessário — `state.items` já vem
+populado com dados reais da API via `loadStateFromAPI()`, e a
+`renderDashboard()` original já calcula os contadores de Artigos/Notícias/Em
+revisão a partir de `state.items`. Sem a sobrescrita, todos os cards e
+seções originais voltam a aparecer, já com números reais.
+
+
 
 IDs numéricos "nus" (sem prefixo, ex. `5`) continuam sendo aceitos e
 tratados como artigo — então nenhum link/bookmark antigo quebra.
