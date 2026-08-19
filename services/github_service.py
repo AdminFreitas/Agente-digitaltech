@@ -106,6 +106,41 @@ def testar_conexao() -> dict:
         return {"ok": False, "erro": f"Erro de conexão: {str(e)}"}
 
 
+def disparar_deploy_site() -> dict:
+    """
+    Aciona o workflow 'static.yml' via GitHub API no repositório do site (digitaltech),
+    iniciando o deploy automático no GitHub Pages.
+    """
+    if not GITHUB_TOKEN:
+        print("[GitHub Service] ⚠️ Token não configurado para disparar o deploy.")
+        return {"ok": False, "erro": "Token não configurado"}
+
+    # Endpoint direcionado ao repositório do site e ao arquivo static.yml
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/static.yml/dispatches"
+
+    payload = {
+        "ref": GITHUB_BRANCH  # ex: 'main'
+    }
+
+    print(f"[GitHub Service] Disparando workflow 'static.yml' em {GITHUB_REPO}...")
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.post(url, headers=_headers(), json=payload)
+
+        # O GitHub responde com HTTP 204 (No Content) quando aceita o disparador com sucesso
+        if resp.status_code == 204:
+            print("[GitHub Service] 🚀 Deploy disparado com sucesso no GitHub Pages!")
+            return {"ok": True, "status": 204}
+        else:
+            print(f"[GitHub Service] ❌ Erro ao disparar deploy: {resp.status_code} — {resp.text}")
+            return {"ok": False, "status": resp.status_code, "resposta": resp.text}
+
+    except Exception as e:
+        print(f"[GitHub Service] ❌ Erro de conexão ao disparar deploy: {str(e)}")
+        return {"ok": False, "erro": str(e)}
+
+
 def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str) -> dict:
     """
     Lógica interna reutilizável para publicar artigos ou notícias.
@@ -173,6 +208,9 @@ def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str
 
     html_url = resp.json().get("content", {}).get("html_url", "")
     print(f"[GitHub Service] ✅ {config['rotulo_commit'].capitalize()} publicado com sucesso: {html_url}")
+
+    # --- DISPARA O DEPLOY AUTOMÁTICO APÓS PUBLICAR ---
+    disparar_deploy_site()
 
     return {
         "github_url": html_url,

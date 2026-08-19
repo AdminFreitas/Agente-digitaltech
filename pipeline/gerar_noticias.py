@@ -23,11 +23,6 @@ renderizar) e colunas `imagem_*` de `noticias` (metadados de
 atribuição/auditoria). Se a extração falhar por qualquer motivo, a
 notícia é salva mesmo assim, só sem imagem — isso nunca bloqueia a
 publicação.
-
-Sem publicação no GitHub ainda — isso ainda depende de decidir se faz
-sentido pra notícias (github_service.py hoje só sabe escrever em
-content/artigos/), então por enquanto "publicar" uma notícia só muda o
-status no Neon.
 """
 
 import re
@@ -39,6 +34,7 @@ from config.database import SessionLocal
 from agents import pesquisador, editor, revisor, seo
 from agents.editor_chefe import EditorChefe
 from repositories.noticia_repository import NoticiaRepository
+from services.github_service import publicar_noticia
 
 TIMEOUT_DOWNLOAD_IMAGEM = 10  # segundos
 USER_AGENT_DOWNLOAD = "Mozilla/5.0 (compatible; DigitalTechBot/1.0; +https://www.digitaltech.digital/)"
@@ -229,6 +225,18 @@ def gerar_e_processar_noticia(
         if publicar_imediatamente:
             repo.publicar(noticia_id)
             resultado["status"] = "publicado"
+
+    # Publica no GitHub DEPOIS de fechar a sessão do banco.
+    # A chamada de rede não deve segurar uma conexão do Neon aberta.
+    if publicar_imediatamente:
+        try:
+            publicar_noticia(
+                slug=artigo["slug"],
+                conteudo_markdown=artigo["conteudo_markdown"],
+                titulo=artigo.get("titulo_seo") or artigo["titulo"],
+            )
+        except Exception as e:
+            print(f"[Pipeline] FALHA ao publicar notícia no GitHub: {e}")
 
     return resultado
 

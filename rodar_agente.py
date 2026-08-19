@@ -34,6 +34,8 @@ from agents import pesquisador
 from repositories.artigo_repository import ArtigoRepository
 from pipeline.gerar_artigos import gerar_e_processar_artigo
 from pipeline.gerar_noticias import gerar_e_processar_noticia
+from services.github_service import disparar_deploy_site
+
 
 PUBLICAR_IMEDIATAMENTE = True
 
@@ -70,10 +72,16 @@ def _buscar_temas_recentes(limite: int = 30) -> list[str]:
         artigos = ArtigoRepository(db).listar_todos(limite=limite)
         return [a.titulo for a in artigos]
     except TypeError as e:
-        _log(f"AVISO: listar_todos() não aceitou 'limite' ({e}) — seguindo sem temas recentes")
+        _log(
+            f"AVISO: listar_todos() não aceitou 'limite' ({e}) — "
+            "seguindo sem temas recentes"
+        )
         return []
     except Exception as e:
-        _log(f"AVISO: falha ao buscar temas recentes ({e}) — seguindo sem temas recentes")
+        _log(
+            f"AVISO: falha ao buscar temas recentes ({e}) — "
+            "seguindo sem temas recentes"
+        )
         return []
     finally:
         db.close()
@@ -85,12 +93,18 @@ def rodar_artigo(publicar: bool | None = None) -> bool:
     real — nunca lança exceção, quem chama decide o que fazer com o
     resultado (ex.: exit code pro cron/GitHub Actions perceber falha).
     """
-    publicar_imediatamente = PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    publicar_imediatamente = (
+        PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    )
+
     categoria = random.choice(CATEGORIAS_ARTIGOS)
     temas_recentes = _buscar_temas_recentes(limite=30)
 
     try:
-        tema = pesquisador.sugerir_tema(categoria, temas_recentes=temas_recentes)
+        tema = pesquisador.sugerir_tema(
+            categoria,
+            temas_recentes=temas_recentes,
+        )
     except Exception as e:
         _log(f"FALHA ao sugerir tema: {e}")
         return False
@@ -99,10 +113,17 @@ def rodar_artigo(publicar: bool | None = None) -> bool:
 
     try:
         resultado = gerar_e_processar_artigo(
-            tema, categoria, publicar_imediatamente=publicar_imediatamente
+            tema,
+            categoria,
+            publicar_imediatamente=publicar_imediatamente,
         )
         _log(f"Artigo OK: {resultado}")
+
+        if publicar_imediatamente:
+            disparar_deploy_site()
+
         return True
+
     except Exception as e:
         _log(f"FALHA ao gerar artigo: {e}")
         return False
@@ -113,26 +134,47 @@ def rodar_noticia(publicar: bool | None = None) -> bool:
     Gera uma notícia via RSS. Retorna True em sucesso — inclusive
     quando não havia nada de novo pra gerar (ValueError esperado do
     pipeline: feeds sem novidade, tudo duplicado etc. — isso não é uma
-    falha real, é um estado normal). Só retorna False em erro
-    inesperado.
+    falha real). Só retorna False em erro inesperado.
     """
-    publicar_imediatamente = PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    publicar_imediatamente = (
+        PUBLICAR_IMEDIATAMENTE if publicar is None else publicar
+    )
+
     try:
-        resultado = gerar_e_processar_noticia(publicar_imediatamente=publicar_imediatamente)
+        resultado = gerar_e_processar_noticia(
+            publicar_imediatamente=publicar_imediatamente
+        )
         _log(f"Notícia OK: {resultado}")
+
+        if publicar_imediatamente:
+            disparar_deploy_site()
+
         return True
+
     except ValueError as e:
         _log(f"Sem notícia nova: {e}")
         return True
+
     except Exception as e:
         _log(f"FALHA ao gerar notícia: {e}")
         return False
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Gera artigo e/ou notícia — para uso via cron.")
-    parser.add_argument("--artigo", action="store_true", help="Gera um artigo evergreen")
-    parser.add_argument("--noticia", action="store_true", help="Gera uma notícia via RSS")
+    parser = argparse.ArgumentParser(
+        description="Gera artigo e/ou notícia — para uso via cron."
+    )
+    parser.add_argument(
+        "--artigo",
+        action="store_true",
+        help="Gera um artigo evergreen",
+    )
+    parser.add_argument(
+        "--noticia",
+        action="store_true",
+        help="Gera uma notícia via RSS",
+    )
+
     args = parser.parse_args()
 
     if not args.artigo and not args.noticia:
@@ -143,6 +185,7 @@ if __name__ == "__main__":
 
     if args.artigo:
         ok_artigo = rodar_artigo()
+
     if args.noticia:
         ok_noticia = rodar_noticia()
 

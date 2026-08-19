@@ -16,7 +16,7 @@ on:
 
 jobs:
   gerar:
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -43,9 +43,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
-          GITHUB_REPOSITORY: ${{ secrets.GITHUB_REPOSITORY }}
+          GITHUB_TOKEN: ${{ secrets.DIGITALTECH_PAT }}
+          GITHUB_OWNER: "AdminFreitas"
+          GITHUB_REPOSITORY: "digitaltech"
 
       - name: Executar pipeline de artigos
         run: |
@@ -72,9 +72,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
-          GITHUB_REPOSITORY: ${{ secrets.GITHUB_REPOSITORY }}
+          GITHUB_TOKEN: ${{ secrets.DIGITALTECH_PAT }}
+          GITHUB_OWNER: "AdminFreitas"
+          GITHUB_REPOSITORY: "digitaltech"
           PUBLICAR_IMEDIATAMENTE: "true"
 
       - name: Status pós-execução
@@ -85,4 +85,4 @@ jobs:
           echo "===================="
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.DIGITALTECH_PAT }}
