@@ -46,7 +46,7 @@ _TIPOS_CONTEUDO = {
 print(f"[GitHub Service] Repositório alvo: {GITHUB_REPO}")
 print(f"[GitHub Service] Branch: {GITHUB_BRANCH}")
 print(f"[GitHub Service] Diretório base de conteúdo: {GITHUB_CONTENT_PATH}")
-print(f"[GitHub Service] Token carregado: {'SIM (' + GITHUB_TOKEN[:10] + '...)' if GITHUB_TOKEN else 'NÃO — VERIFIQUE O .ENV!'}")
+print(f"[GitHub Service] Token carregado: {'SIM' if GITHUB_TOKEN else 'NÃO — VERIFIQUE O .ENV!'}")
 
 
 def _headers() -> dict:
@@ -106,41 +106,6 @@ def testar_conexao() -> dict:
         return {"ok": False, "erro": f"Erro de conexão: {str(e)}"}
 
 
-def disparar_deploy_site() -> dict:
-    """
-    Aciona o workflow 'static.yml' via GitHub API no repositório do site (digitaltech),
-    iniciando o deploy automático no GitHub Pages.
-    """
-    if not GITHUB_TOKEN:
-        print("[GitHub Service] ⚠️ Token não configurado para disparar o deploy.")
-        return {"ok": False, "erro": "Token não configurado"}
-
-    # Endpoint direcionado ao repositório do site e ao arquivo static.yml
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/static.yml/dispatches"
-
-    payload = {
-        "ref": GITHUB_BRANCH  # ex: 'main'
-    }
-
-    print(f"[GitHub Service] Disparando workflow 'static.yml' em {GITHUB_REPO}...")
-
-    try:
-        with httpx.Client(timeout=15.0) as client:
-            resp = client.post(url, headers=_headers(), json=payload)
-
-        # O GitHub responde com HTTP 204 (No Content) quando aceita o disparador com sucesso
-        if resp.status_code == 204:
-            print("[GitHub Service] 🚀 Deploy disparado com sucesso no GitHub Pages!")
-            return {"ok": True, "status": 204}
-        else:
-            print(f"[GitHub Service] ❌ Erro ao disparar deploy: {resp.status_code} — {resp.text}")
-            return {"ok": False, "status": resp.status_code, "resposta": resp.text}
-
-    except Exception as e:
-        print(f"[GitHub Service] ❌ Erro de conexão ao disparar deploy: {str(e)}")
-        return {"ok": False, "erro": str(e)}
-
-
 def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str) -> dict:
     """
     Lógica interna reutilizável para publicar artigos ou notícias.
@@ -170,7 +135,12 @@ def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str
         elif resp.status_code == 404:
             print(f"[GitHub Service] {config['rotulo_commit'].capitalize()} novo (vai criar)")
         else:
-            print(f"[GitHub Service] Aviso ao verificar existência: {resp.status_code}")
+            raise RuntimeError(
+                f"[GitHub Service] Erro ao verificar existência do arquivo no "
+                f"GitHub (status {resp.status_code}). Publicação abortada — uma "
+                f"resposta diferente de 200/404 nunca deve ser tratada como "
+                f"'arquivo novo'."
+            )
 
     payload = {
         "message": f"feat: adiciona {config['rotulo_commit']} '{titulo}'",
@@ -183,6 +153,25 @@ def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str
     with httpx.Client(timeout=15.0) as client:
         resp = client.put(url, headers=headers, json=payload)
 
+    if resp.status_code == 409:
+        # Auditoria 6/16 (correcao automatica - corrigir_github_conflito.py)
+        # Conflito HTTP 409: o SHA usado neste PUT pode ter ficado
+        # desatualizado entre o GET e o PUT (condicao de corrida).
+        # NAO tratar como sucesso e NAO prosseguir para o deploy.
+        # Retry automatico nao foi implementado aqui por seguranca
+        # (evita loop e sobrescrita silenciosa); nova tentativa
+        # exige novo GET + novo SHA, feita fora deste bloco.
+        erro = resp.json() if resp.text else {}
+        mensagem = erro.get("message", "Sem detalhes")
+        raise RuntimeError(
+            f"Erro 409 \u2014 Conflito ao publicar no GitHub: o arquivo pode ter sido "
+            f"alterado entre a leitura do SHA e o envio do PUT (condicao "
+            f"de corrida). Nao foi aplicado como sucesso e o deploy nao foi "
+            f"disparado.\n\n"
+            f"Mensagem do GitHub: {mensagem}\n\n"
+            f"Solucao: refaca a leitura (GET) do arquivo para obter o SHA atual "
+            f"antes de tentar publicar novamente."
+        )
     if resp.status_code == 403:
         erro = resp.json() if resp.text else {}
         mensagem = erro.get("message", "Sem detalhes")
@@ -208,9 +197,6 @@ def _publicar_conteudo(tipo: str, slug: str, conteudo_markdown: str, titulo: str
 
     html_url = resp.json().get("content", {}).get("html_url", "")
     print(f"[GitHub Service] ✅ {config['rotulo_commit'].capitalize()} publicado com sucesso: {html_url}")
-
-    # --- DISPARA O DEPLOY AUTOMÁTICO APÓS PUBLICAR ---
-    disparar_deploy_site()
 
     return {
         "github_url": html_url,

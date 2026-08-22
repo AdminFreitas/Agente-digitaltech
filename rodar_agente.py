@@ -34,7 +34,6 @@ from agents import pesquisador
 from repositories.artigo_repository import ArtigoRepository
 from pipeline.gerar_artigos import gerar_e_processar_artigo
 from pipeline.gerar_noticias import gerar_e_processar_noticia
-from services.github_service import disparar_deploy_site
 
 
 PUBLICAR_IMEDIATAMENTE = True
@@ -119,9 +118,6 @@ def rodar_artigo(publicar: bool | None = None) -> bool:
         )
         _log(f"Artigo OK: {resultado}")
 
-        if publicar_imediatamente:
-            disparar_deploy_site()
-
         return True
 
     except Exception as e:
@@ -145,9 +141,6 @@ def rodar_noticia(publicar: bool | None = None) -> bool:
             publicar_imediatamente=publicar_imediatamente
         )
         _log(f"Notícia OK: {resultado}")
-
-        if publicar_imediatamente:
-            disparar_deploy_site()
 
         return True
 

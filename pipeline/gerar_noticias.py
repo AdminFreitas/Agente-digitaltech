@@ -222,21 +222,22 @@ def gerar_e_processar_noticia(
             "imagem_encontrada": bool(dados_imagem),
         }
 
-        if publicar_imediatamente:
-            repo.publicar(noticia_id)
-            resultado["status"] = "publicado"
-
     # Publica no GitHub DEPOIS de fechar a sessão do banco.
     # A chamada de rede não deve segurar uma conexão do Neon aberta.
     if publicar_imediatamente:
         try:
-            publicar_noticia(
+            resultado_github = publicar_noticia(
                 slug=artigo["slug"],
                 conteudo_markdown=artigo["conteudo_markdown"],
                 titulo=artigo.get("titulo_seo") or artigo["titulo"],
             )
         except Exception as e:
             print(f"[Pipeline] FALHA ao publicar notícia no GitHub: {e}")
+        else:
+            # A publicação no GitHub já foi confirmada.
+            # O status no Neon não depende de um deploy separado.
+            repo.publicar(noticia_id)
+            resultado["status"] = "publicado"
 
     return resultado
 

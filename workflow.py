@@ -1,9 +1,8 @@
 """
 workflow.py — Ponto de entrada para GitHub Actions
-
-O disparo do deploy (disparar_deploy_site) agora acontece dentro de
-rodar_agente.py, então este arquivo só precisa chamar rodar_artigo()
-e/ou rodar_noticia() conforme o --tipo.
+Este arquivo apenas chama rodar_artigo() e/ou rodar_noticia() conforme
+o --tipo. A publicação no GitHub é confirmada aqui; o deploy do site
+é responsabilidade externa a este fluxo.
 
 Uso:
     python workflow.py --tipo noticia
